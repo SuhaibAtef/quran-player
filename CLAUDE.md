@@ -52,16 +52,25 @@ Core workflow:
 3. `agent-browser click @e1` / `fill @e2 "text"` — Interact using refs
 4. Re-snapshot after page changes
 
-## Hooks (planned)
+## Hooks
 
-These hooks belong in `.claude/settings.json` (configure with the `update-config` skill). Each one wires a deterministic gate around the agent so we catch issues without human babysitting. Treat this list as the project's intended automation surface — implement them as the project matures, and update this section when one ships or changes.
+Hooks live in committed [.claude/settings.json](.claude/settings.json), with shell glue under [.claude/hooks/](.claude/hooks/). Each one gates the agent deterministically so problems get caught without human babysitting.
 
-- **Auto-formatting on save** — `PostToolUse` on `Edit`/`Write` runs `dart format <file>` (and `clang-format` for native runner code) so style nits never reach review.
+Hook scripts are PowerShell (`pwsh`). On a fresh machine, install PowerShell 7+ if it's not already present (Windows: `winget install Microsoft.PowerShell`).
+
+### Wired up today
+
+- **Auto-formatting on save** — `PostToolUse` on `Edit`/`Write` runs `dart format <file>` on Dart sources via [.claude/hooks/format-on-save.ps1](.claude/hooks/format-on-save.ps1). Non-Dart edits are no-ops; failures print to stderr but never block the agent.
+- **Test-on-commit** — `PreToolUse` on `Bash` watches for `git commit` and runs `flutter test` first via [.claude/hooks/pre-commit-tests.ps1](.claude/hooks/pre-commit-tests.ps1). On failure the hook exits 2, blocking the commit and feeding the test output back into the agent's context so it can fix-and-retry without human intervention.
+
+### Planned
+
+Implement these as the project matures, and move them to *Wired up today* when they ship.
+
 - **Security scanning** — `PostToolUse` on `Edit`/`Write` runs the deepsec scanner on the touched file. Catches secrets and known vulnerable patterns; flags any change to auth/authz code before the agent moves on.
 - **Dependency auditing** — `PreToolUse` on edits to [pubspec.yaml](pubspec.yaml) runs a vulnerability check against the new package(s) before the agent commits.
 - **Interactive checkpoints** — `PreToolUse` on dependency adds, schema migrations, or any other risky step prompts the user (e.g. "the agent wants to add `package:foo` — approve?"). Keeps a human in the loop without watching every step.
 - **Automated sub-agent review** — `Stop` hook fires a review subagent (or several in parallel) over the diff before the work is considered done. Surfaces issues the implementing agent missed.
-- **Test-on-commit** — `PreToolUse` on `git commit` runs `flutter test`; failures are fed back into the agent's context automatically so it can fix and re-commit without human intervention.
 - **License compliance** — when `pubspec.lock` changes, check new transitive licenses against the project's allow-list. Block GPL/AGPL/SSPL by default.
 - **Skill and docs updates** — `Stop` hook prompts the agent to review whether the change should update `CLAUDE.md`, `README.md`, or any skill file (matching the *Keep docs current* rule above).
 
