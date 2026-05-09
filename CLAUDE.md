@@ -24,6 +24,7 @@ This file is the root context. Each platform folder owns its own `CLAUDE.md` for
 
 - [android/CLAUDE.md](android/CLAUDE.md)
 - [ios/CLAUDE.md](ios/CLAUDE.md)
+- [macos/CLAUDE.md](macos/CLAUDE.md)
 - [web/CLAUDE.md](web/CLAUDE.md)
 - [windows/CLAUDE.md](windows/CLAUDE.md)
 - [linux/CLAUDE.md](linux/CLAUDE.md)
