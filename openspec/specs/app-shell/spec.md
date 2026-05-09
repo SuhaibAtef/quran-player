@@ -1,7 +1,11 @@
 # app-shell Specification
 
 ## Purpose
-TBD - created by archiving change bootstrap-foundation. Update Purpose after archive.
+
+Defines the user-observable contract for the Quran Companion application shell: the app launches on Windows desktop into a ForUI-themed window with a navigation skeleton covering every top-level area in the IDEA.md MVP (Home/Surahs, Search, Bookmarks, Settings, MCP Status), supports light/dark/system theme modes that persist across restarts, and exposes the layered `lib/` structure that all subsequent feature changes build into.
+
+This spec was promoted from the [`bootstrap-foundation`](../../changes/archive/2026-05-09-bootstrap-foundation/) change. Future changes that touch shell behavior (new top-level destination, navigation chrome rework, theme variant swap) MUST modify this spec via a delta and re-promote on archive.
+
 ## Requirements
 ### Requirement: Application launches into a themed shell
 
