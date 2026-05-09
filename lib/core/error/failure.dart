@@ -38,3 +38,26 @@ class ValidationFailure extends Failure {
 
   final String? field;
 }
+
+class InvalidInputFailure extends Failure {
+  const InvalidInputFailure(super.message, {super.cause, super.stackTrace});
+}
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure(
+    super.message, {
+    this.key,
+    super.cause,
+    super.stackTrace,
+  });
+
+  final String? key;
+}
+
+class DataAccessFailure extends Failure {
+  const DataAccessFailure(super.message, {super.cause, super.stackTrace});
+}
+
+class DataIntegrityFailure extends Failure {
+  const DataIntegrityFailure(super.message, {super.cause, super.stackTrace});
+}

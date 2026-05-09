@@ -6,14 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Foundation in place — **Quran Companion**, a desktop Quran player paired with a local MCP server for safe AI integration. See [IDEA.md](IDEA.md) for the full product brief: target platforms (Windows MVP; macOS + Linux for V1), MVP scope, MCP tool/resource surface, safety rules, and the *"trustworthy before powerful"* project principle that should drive scope decisions.
 
-What's wired today (after the `bootstrap-foundation` change):
+What's wired today (after `bootstrap-foundation` and `quran-data-layer`):
 
 - ForUI-themed app shell with light/dark/system mode and persistent selection ([lib/app/](lib/app/)).
 - `go_router` declarative routing with placeholder pages for every top-level area in IDEA.md MVP — Home/Surahs, Search, Bookmarks, Settings, MCP Status ([lib/features/](lib/features/)).
 - Riverpod state, `Result`/`Failure` types in [lib/core/error/](lib/core/error/), and an `appLogger` facade in [lib/core/logging/](lib/core/logging/).
-- Smoke test guarding shell, navigation, theme switch, and unknown-route redirect ([test/widget_test.dart](test/widget_test.dart)).
+- **Quran data layer** — bundled SQLite asset ([assets/quran/quran.sqlite](assets/quran/quran.sqlite)) of the Tanzil Uthmani edition (114 surahs / 6,236 ayahs), produced by [tool/build_quran_db.dart](tool/build_quran_db.dart). Domain contracts in [lib/domain/quran/](lib/domain/quran/), SQLite-backed implementation in [lib/data/quran/](lib/data/quran/), runtime fail-closed integrity check, and a Riverpod `quranBootstrapProvider` that the router consumes. Surahs page now renders the real list. Source attribution surfaces in Settings; full credits in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- Smoke + integration tests guarding shell, navigation, theme switch, unknown-route redirect, the data-layer integrity check, and the repository contract against the real bundled DB ([test/](test/)).
 
-What's not yet implemented: Quran data, audio, search, bookmarks, MCP server. Each lands in its own OpenSpec change against this foundation.
+What's not yet implemented: visual mushaf reader (planned via `qcf_quran_plus`), audio, search UX (FTS5 index exists), bookmarks, MCP server. Each lands in its own OpenSpec change against this foundation.
 
 - Dart SDK constraint: `^3.10.4` ([pubspec.yaml:22](pubspec.yaml#L22)).
 - Platforms shipped: Windows (MVP), macOS, Linux. `android/`, `ios/`, `web/` were removed; recreate via `flutter create --platforms=<target> .` if a future change reintroduces one.
@@ -27,8 +28,14 @@ lib/
   main.dart                # logging + SharedPreferences + ProviderScope bootstrap
   app/                     # composition: router, theme, app-wide state, shell chrome
   core/                    # cross-cutting: env, error/Result, logging
-  features/<area>/         # one folder per top-level area (placeholder pages today)
-  data/   domain/          # populated by future changes; framework-free contracts in domain/
+  features/<area>/         # one folder per top-level area (Surahs is wired to data; others are placeholders)
+  domain/quran/            # framework-free Quran contracts (Surah, Ayah, AyahKey, QuranSource, QuranRepository)
+  data/quran/              # SQLite-backed implementation, manifest parser, integrity checker, providers
+tool/
+  build_quran_db.dart      # maintainer-only: download + build assets/quran/quran.sqlite + manifest.json
+assets/quran/
+  quran.sqlite             # bundled, byte-deterministic, regenerated via `just build-quran-db`
+  manifest.json            # records source, counts, and SHA-256 checksums
 ```
 
 State, error, logging conventions:
@@ -41,6 +48,7 @@ State, error, logging conventions:
 ## Tooling and conventions
 
 - **Version control:** `git`, hosted on **GitHub**. Follow **git-flow**: every change ships through a PR, never directly to `main`. `main` must always build with no errors — if a PR breaks the build, revert before merging another change.
+  - **One change, one branch.** Before the first edit of a new OpenSpec change (`/opsx:apply`) or any non-trivial multi-file work, create a dedicated branch from `develop` — typically `feature/<openspec-change-name>` (or `chore/...` / `fix/...` per the change type). Don't pile a new change onto whatever branch happens to be checked out, even if it looks "almost ready to merge." If the current branch already has uncommitted work, stash it (or ask the user) before switching. Announce the new branch as the first user-visible action of the implementation.
 - **Project management:** **Linear** — issues, cycles, and roadmap live there, not in GitHub Issues.
 - **UI library:** [forui](https://forui.dev/) — prefer ForUI components over hand-rolled widgets and over `material`/`cupertino` primitives where a ForUI equivalent exists. Keep theming centralized so a swap stays cheap.
 - **Task runner:** **Justfile** at the repo root wraps the common `flutter`/`dart` commands. Add new repeatable workflows as `just` recipes rather than as ad-hoc shell snippets in docs.
@@ -116,6 +124,7 @@ PowerShell is the default shell on this machine. Run from the repo root. Common 
 | `just run [device]` | `flutter run -d <device>` | Launch on a device (default `windows`); `just devices` to list |
 | `just build <target>` | `flutter build <target>` | Release build (`apk`, `windows`, `web`, …) |
 | `just check` | format + analyze + test | Pre-commit gate |
+| `just build-quran-db` | `dart run tool/build_quran_db.dart` | **Maintainer-only.** Downloads the upstream Tanzil Uthmani edition and rebuilds [assets/quran/quran.sqlite](assets/quran/quran.sqlite) + [assets/quran/manifest.json](assets/quran/manifest.json). Requires network access. Idempotent — re-running produces a byte-identical DB. Commit both files together. |
 
 If you don't have `just` installed, the underlying commands above work directly. New repeatable workflows belong in the [Justfile](Justfile), not in ad-hoc docs.
 
@@ -123,4 +132,5 @@ If you don't have `just` installed, the underlying commands above work directly.
 
 - Windows-only release metadata (CompanyName, FileDescription, ProductName, version) lives in [windows/runner/Runner.rc](windows/runner/Runner.rc). Update before distributing a build. macOS/Linux equivalents live in their respective platform folders.
 - ForUI is pinned at `^0.17.0` because 0.18+ requires Flutter 3.41+ and the project is on 3.38.5. If you bump Flutter, you can bump ForUI in the same change — but expect breaking API changes; centralize the import surface in [lib/app/theme/](lib/app/theme/) and [lib/app/widgets/app_shell.dart](lib/app/widgets/app_shell.dart) so the bump is bounded.
-- `path_provider` is intentionally **not** a dependency yet. When the first feature needs an OS-specific data path (audio cache, log files, Quran DB), add it then — and revisit the file-logging plan in [lib/core/logging/logger.dart](lib/core/logging/logger.dart).
+- The Quran SQLite asset is byte-deterministic for a given upstream text, so `dbSha256` in [assets/quran/manifest.json](assets/quran/manifest.json) is a real tamper detector. Don't hand-edit `quran.sqlite` or `manifest.json` — re-run `just build-quran-db`. The runtime integrity check fails closed: any mismatch sends the user to a fatal error screen rather than serving wrong text.
+- The visual mushaf reader is planned to use [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus) on top of the existing `QuranRepository`. Keep new reader surfaces backed by the repository so MCP and search continue to share one source of truth.
