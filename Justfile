@@ -55,3 +55,8 @@ clean:
 
 # Pre-commit gate: format, analyze, test
 check: format analyze test
+
+# Maintainer-only: rebuild assets/quran/quran.sqlite + manifest.json from upstream.
+# Requires network access. Idempotent: re-running produces a byte-identical DB.
+build-quran-db:
+    dart run tool/build_quran_db.dart

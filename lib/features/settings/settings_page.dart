@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
 import '../../app/state/theme_mode_provider.dart';
+import '../../core/error/result.dart';
+import '../../domain/quran/quran_source.dart';
+import 'state/quran_source_provider.dart';
 
 class SettingsPageKeys {
   const SettingsPageKeys._();
@@ -14,6 +17,12 @@ class SettingsPageKeys {
   static const themeOptionDark = Key('settings.theme.dark');
   static const themeOptionSystem = Key('settings.theme.system');
   static const darkOnlyMarker = Key('settings.dark_only_marker');
+  static const sourceSection = Key('settings.source_section');
+  static const sourceName = Key('settings.source.name');
+  static const sourceEdition = Key('settings.source.edition');
+  static const sourceVersion = Key('settings.source.version');
+  static const sourceLicense = Key('settings.source.license');
+  static const sourceUrl = Key('settings.source.url');
 }
 
 class SettingsPage extends ConsumerWidget {
@@ -65,10 +74,90 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          const _QuranSourceSection(),
           if (brightness == Brightness.dark)
             const SizedBox(key: SettingsPageKeys.darkOnlyMarker, height: 1),
         ],
       ),
+    );
+  }
+}
+
+class _QuranSourceSection extends ConsumerWidget {
+  const _QuranSourceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(quranSourceProvider);
+    return Container(
+      key: SettingsPageKeys.sourceSection,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Quran source',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: FProgress(),
+            ),
+            error: (e, st) => Text("Couldn't load attribution: $e"),
+            data: (result) => switch (result) {
+              Ok(:final value) => _QuranSourceCard(source: value),
+              Err(:final failure) => Text(
+                "Couldn't load attribution: ${failure.message}",
+              ),
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuranSourceCard extends StatelessWidget {
+  const _QuranSourceCard({required this.source});
+
+  final QuranSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final smallStyle = context.theme.typography.sm;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          source.name,
+          key: SettingsPageKeys.sourceName,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          source.edition,
+          key: SettingsPageKeys.sourceEdition,
+          style: smallStyle,
+        ),
+        Text(
+          'Version ${source.version}',
+          key: SettingsPageKeys.sourceVersion,
+          style: smallStyle,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          source.license,
+          key: SettingsPageKeys.sourceLicense,
+          style: smallStyle,
+        ),
+        const SizedBox(height: 4),
+        Text(source.url, key: SettingsPageKeys.sourceUrl, style: smallStyle),
+      ],
     );
   }
 }

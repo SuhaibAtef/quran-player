@@ -64,8 +64,13 @@ lib/
     logging/                   # appLogger facade over package:logging
   features/                    # one folder per top-level area; placeholders today
     home/  surah_detail/  search/  bookmarks/  settings/  mcp_status/
-  data/                        # repositories — populated by future changes
-  domain/                      # entities + use-cases — populated by future changes
+  data/quran/                  # SQLite-backed QuranRepository, manifest parser, integrity checker
+  domain/quran/                # framework-free Quran contracts (Surah, Ayah, AyahKey, QuranSource, QuranRepository)
+tool/
+  build_quran_db.dart          # maintainer-only build tool (see "Building the Quran DB")
+assets/quran/
+  quran.sqlite                 # bundled, byte-deterministic
+  manifest.json                # source attribution + SHA-256 checksums
 ```
 
 Conventions:
@@ -78,7 +83,7 @@ Conventions:
 
 ## Status
 
-Foundation in place — ForUI-themed shell with declarative routing, Riverpod state, and a smoke test. No domain code yet (Quran data, audio, search, bookmarks, MCP all land in subsequent OpenSpec changes). Tracking lives in:
+Foundation + Quran data layer in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset. Audio, search UX, bookmarks, the visual mushaf reader, and the MCP server each land in subsequent OpenSpec changes against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
@@ -102,6 +107,20 @@ Day-to-day commands are wrapped in the [Justfile](Justfile) — run `just` to li
 | `just check` | format + analyze + test (pre-commit gate) |
 
 If you don't have `just` installed, the underlying `flutter`/`dart` commands work directly.
+
+## Data sources
+
+Quran Companion bundles only verified, attributed text. Full credits live in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The MVP edition is **Tanzil's Uthmani plain text** (114 surahs, 6,236 ayahs), distributed under the [Tanzil Quran Text License](https://tanzil.net/docs/tanzil_license) — verbatim redistribution + attribution required, modification forbidden. The bundled SQLite asset is byte-deterministic and integrity-checked at every launch; if the check fails, the app refuses to render Quran data.
+
+## Building the Quran DB
+
+`assets/quran/quran.sqlite` and `assets/quran/manifest.json` are produced by [tool/build_quran_db.dart](tool/build_quran_db.dart). To rebuild from upstream:
+
+```sh
+just build-quran-db
+```
+
+The tool downloads the pinned Tanzil Uthmani edition (currently via the [Islamic Network alquran.cloud API](https://alquran.cloud/api), which redistributes Tanzil's `quran-uthmani`), verifies its SHA-256 against an in-source pin, builds the database, and writes the manifest. Re-running with the same upstream produces a byte-identical DB. Commit `quran.sqlite` and `manifest.json` together — the manifest's `dbSha256` is the runtime tamper detector. Network access is required only for this maintainer step; the runtime app is fully offline.
 
 ## Contributing
 

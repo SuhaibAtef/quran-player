@@ -14,11 +14,10 @@ class App extends ConsumerStatefulWidget {
 }
 
 class _AppState extends ConsumerState<App> {
-  late final _router = buildAppRouter();
-
   @override
   Widget build(BuildContext context) {
     final mode = ref.watch(themeModeProvider);
+    final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
       title: 'Quran Companion',
@@ -28,7 +27,7 @@ class _AppState extends ConsumerState<App> {
       darkTheme: AppTheme.dark.toApproximateMaterialTheme(),
       localizationsDelegates: FLocalizations.localizationsDelegates,
       supportedLocales: FLocalizations.supportedLocales,
-      routerConfig: _router,
+      routerConfig: router,
       builder: (context, child) {
         final platformBrightness = MediaQuery.platformBrightnessOf(context);
         final theme = AppTheme.resolve(mode, platformBrightness);

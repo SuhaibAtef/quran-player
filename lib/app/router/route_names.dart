@@ -7,6 +7,8 @@ class RoutePaths {
   static const bookmarks = '/bookmarks';
   static const settings = '/settings';
   static const mcpStatus = '/mcp';
+  static const dataIntegrityError = '/_error/data-integrity';
+  static const bootstrapping = '/_loading';
 
   static String surahDetailFor(String id) => '/surahs/$id';
 }
@@ -20,4 +22,6 @@ class RouteNames {
   static const bookmarks = 'bookmarks';
   static const settings = 'settings';
   static const mcpStatus = 'mcp_status';
+  static const dataIntegrityError = 'data_integrity_error';
+  static const bootstrapping = 'bootstrapping';
 }

@@ -51,6 +51,15 @@ dependencies:
   # Persists ThemeMode + future user preferences to OS-specific storage.
   shared_preferences: ^2.3.4
 
+  # Quran corpus storage (read-only, bundled SQLite asset).
+  # Desktop-only `sqflite` flavor; the build tool uses `sqlite3` directly.
+  sqflite_common_ffi: ^2.3.3
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # SHA-256 for runtime integrity verification of the bundled DB.
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -62,6 +71,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Maintainer-only build tool (`tool/build_quran_db.dart`). Not shipped at runtime.
+  http: ^1.2.2
+  sqlite3: ^2.4.6
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -72,6 +85,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/quran/quran.sqlite
+    - assets/quran/manifest.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:
