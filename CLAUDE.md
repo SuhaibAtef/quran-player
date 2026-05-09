@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Freshly scaffolded Flutter app (`flutter create`) intended to become a Quran player. [lib/main.dart](lib/main.dart) is still the default counter demo and [test/widget_test.dart](test/widget_test.dart) tests that demo — both will need to be replaced as real features land.
+Freshly scaffolded Flutter app (`flutter create`) intended to become **Quran Companion** — a desktop Quran player paired with a local MCP server for safe AI integration. See [IDEA.md](IDEA.md) for the full product brief: target platforms (Windows MVP; macOS + Linux for V1), MVP scope, MCP tool/resource surface, safety rules, and the *"trustworthy before powerful"* project principle that should drive scope decisions. [lib/main.dart](lib/main.dart) is still the default counter demo and [test/widget_test.dart](test/widget_test.dart) tests that demo — both will need to be replaced as real features land.
 
 - Dart SDK constraint: `^3.10.4` ([pubspec.yaml:22](pubspec.yaml#L22))
 - All six Flutter platforms are enabled (android, ios, web, windows, macos, linux). Drop the platforms you don't ship from `pubspec.yaml` and remove their folders rather than letting them rot.
