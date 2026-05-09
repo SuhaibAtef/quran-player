@@ -3,8 +3,11 @@
 //
 // Run: `dart run tool/build_quran_db.dart` (or `just build-quran-db`).
 //
-// The runtime app does NOT import anything under `tool/`. Dependencies used
-// here (http, archive, crypto, sqlite3) are dev-only.
+// The runtime app does NOT import anything under `tool/`. Build-tool-only
+// dependencies are `http`, `archive`, and `sqlite3` (all under
+// `dev_dependencies` in pubspec.yaml). `crypto` is also imported here, but
+// it ships at runtime as well — the app's integrity checker hashes the
+// bundled DB with SHA-256.
 
 import 'dart:convert';
 import 'dart:io';
