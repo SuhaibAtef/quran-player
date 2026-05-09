@@ -1,5 +1,9 @@
 # Quran Player task runner. Run `just` (no args) to list recipes.
 
+# Use PowerShell 7+ on Windows (the project's default shell per CLAUDE.md).
+# Non-Windows hosts keep just's default `sh`.
+set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
+
 # List available recipes
 default:
     @just --list
