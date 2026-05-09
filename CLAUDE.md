@@ -63,7 +63,7 @@ When working inside one of those folders, read its `CLAUDE.md` in addition to th
 The following skills are part of the standard workflow on this project. Skill files live under version control (see *Tooling and conventions* above) so the whole team and every Claude session shares the same toolkit. Invoke via `/<skill-name>` when the work matches.
 
 - **Flutter Skills** — Flutter/Dart guidance: app structure, state-management choice, widget composition, platform-channel boundaries, asset/font handling, and idiomatic Dart. Reach for these whenever a question is Flutter-shaped rather than language-agnostic — e.g. "where should this provider live?", "how do I wire a `MethodChannel`?", "is this widget rebuild necessary?". The vendored set under [.claude/skills/](.claude/skills/) splits into ten focused sub-skills covering architecture, testing (widget/integration/previews), responsive layout and overflow fixes, JSON serialization, declarative routing, localization, and HTTP — invoke any with `/flutter-<topic>`.
-- **ForUI** ([.claude/skills/forui/](.claude/skills/forui/SKILL.md)) — the project's UI-library reference. Captures the pinned version (`forui: ^0.17.0`), theming wiring (`FThemes.zinc.light` + `toApproximateMaterialTheme()` + `FLocalizations`), the widget map by category, and pointers to ForUI's LLM docs ([llms.txt](https://forui.dev/docs/llms.txt) / [llms-full.txt](https://forui.dev/docs/llms-full.txt)). Invoke `/forui` (or let it auto-trigger) for any UI work — picking widgets, adding screens, theming, or deciding when Material/Cupertino primitives are still appropriate.
+- **ForUI** ([.claude/skills/forui/](.claude/skills/forui/SKILL.md)) — the project's UI-library reference. Captures the pinned version (`forui: ^0.17.0`), theming wiring (`FThemes.zinc.light` + `toApproximateMaterialTheme()` + `FLocalizations`), the widget map by category, and pointers to ForUI's LLM docs ([llms.txt](https://forui.dev/docs/llms.txt) / [llms-full.txt](https://forui.dev/docs/llms-full.txt)). The companion file [.claude/skills/forui/INDEX.md](.claude/skills/forui/INDEX.md) is the *reference data* — every theme variant, every public widget's constructor pattern, the location of `FIcons` (lives in `forui_assets`, not `forui`) plus a curated list of icon names known to exist at this pin. Read INDEX.md before grepping the package cache or hitting the network for "does X exist in 0.17?". Invoke `/forui` (or let it auto-trigger) for any UI work — picking widgets, adding screens, theming, or deciding when Material/Cupertino primitives are still appropriate.
 - **OpenSpec** — spec-driven workflow. Use the four sub-skills as a pipeline before non-trivial work: `/openspec-explore` to think through the problem, `/openspec-propose` to generate the proposal + specs + tasks, `/openspec-apply-change` to implement against the spec, `/openspec-archive-change` to finalize and move it to the archive once shipped. The spec is the source of truth — update it when scope shifts, then re-implement against it.
 - **Impeccable** — frontend quality bar. Use for design audits, visual hierarchy, accessibility, motion, copy, theming, and "this looks fine but feels off" reviews. Run after a feature lands to polish, or before a redesign to plan. Out of scope: backend or non-UI logic.
 - **agent-browser** — browser automation skill (see the *Browser automation* section below for the workflow). Use whenever the task involves driving a real browser — visual regression checks for the web build, smoke-testing the deployed PWA, scraping recitation metadata from public sources, etc.
@@ -118,6 +118,20 @@ PowerShell is the default shell on this machine. Run from the repo root. Common 
 | `just check` | format + analyze + test | Pre-commit gate |
 
 If you don't have `just` installed, the underlying commands above work directly. New repeatable workflows belong in the [Justfile](Justfile), not in ad-hoc docs.
+
+### Tooling paths on this machine
+
+GitHub CLI (`gh`) ships at `C:\Program Files\GitHub CLI\gh.exe` and is **not** on the bash `PATH` exposed to Claude Code's `Bash` tool. Either call it via the full path or use PowerShell, where `gh` resolves through the standard install. Examples:
+
+```powershell
+& "C:\Program Files\GitHub CLI\gh.exe" pr create --base develop --title "..."
+```
+
+```bash
+"/c/Program Files/GitHub CLI/gh.exe" pr list
+```
+
+This applies to other Windows-installed CLIs too — when the bash side reports `command not found`, check `Get-Command` in PowerShell first, and prefer running the command via PowerShell or its full path rather than mutating `PATH`.
 
 ## Notes for future work
 
