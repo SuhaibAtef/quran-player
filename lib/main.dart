@@ -1,45 +1,21 @@
-import 'package:flutter/material.dart';
-import 'package:forui/forui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const QuranPlayerApp());
-}
+import 'app/app.dart';
+import 'app/state/theme_mode_provider.dart';
+import 'core/logging/logger.dart';
 
-class QuranPlayerApp extends StatelessWidget {
-  const QuranPlayerApp({super.key});
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  initLogging();
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Quran Player',
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: FLocalizations.localizationsDelegates,
-      supportedLocales: FLocalizations.supportedLocales,
-      theme: FThemes.zinc.light.toApproximateMaterialTheme(),
-      builder: (context, child) =>
-          FTheme(data: FThemes.zinc.light, child: child!),
-      home: const HomePage(),
-    );
-  }
-}
+  final prefs = await SharedPreferences.getInstance();
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FScaffold(
-      header: const FHeader(title: Text('Quran Player')),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Welcome to Quran Player'),
-            const SizedBox(height: 16),
-            FButton(onPress: () {}, child: const Text('Get started')),
-          ],
-        ),
-      ),
-    );
-  }
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const App(),
+    ),
+  );
 }
