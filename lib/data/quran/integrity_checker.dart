@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -13,7 +14,10 @@ const int expectedSchemaVersion = 1;
 const int expectedSurahCount = 114;
 const int expectedAyahCount = 6236;
 
-const String _verifiedDbShaKey = 'quran.integrity.verified_db_sha256';
+// Cache key holding a JSON-encoded `_VerifiedSignature` (dbSha256 + file
+// length + mtime). Any drift in length/mtime invalidates the cache and forces
+// a fresh hash.
+const String _verifiedSignatureKey = 'quran.integrity.verified_db_signature';
 
 class IntegrityReport {
   const IntegrityReport({required this.dbSha256, required this.skippedHash});
@@ -32,10 +36,20 @@ Future<Result<IntegrityReport>> verifyQuranIntegrity({
     return Result.err(structural.failure);
   }
 
-  // Hash skip cache: if we previously hashed this same dbSha256 and matched,
-  // we don't re-hash on subsequent launches.
-  final cached = prefs.getString(_verifiedDbShaKey);
-  if (cached == manifest.dbSha256) {
+  // Capture the on-disk file's signature so the cache can detect any drift
+  // (re-materialisation, partial upgrade, local corruption, manual edit).
+  final stat = FileStat.statSync(database.filePath);
+  final currentSig = _VerifiedSignature(
+    dbSha256: manifest.dbSha256,
+    fileLength: stat.size,
+    mtimeMs: stat.modified.millisecondsSinceEpoch,
+  );
+
+  // Hash-skip cache: skip the expensive SHA pass only when the cached
+  // signature matches manifest.dbSha256 AND the file's length + mtime are
+  // identical to what we recorded after the last successful verify.
+  final cached = _readCachedSignature(prefs);
+  if (cached != null && cached == currentSig) {
     return Result.ok(
       IntegrityReport(dbSha256: manifest.dbSha256, skippedHash: true),
     );
@@ -52,10 +66,55 @@ Future<Result<IntegrityReport>> verifyQuranIntegrity({
     );
   }
 
-  await prefs.setString(_verifiedDbShaKey, manifest.dbSha256);
+  await prefs.setString(_verifiedSignatureKey, currentSig.toJson());
   return Result.ok(
     IntegrityReport(dbSha256: manifest.dbSha256, skippedHash: false),
   );
+}
+
+class _VerifiedSignature {
+  const _VerifiedSignature({
+    required this.dbSha256,
+    required this.fileLength,
+    required this.mtimeMs,
+  });
+
+  final String dbSha256;
+  final int fileLength;
+  final int mtimeMs;
+
+  String toJson() => jsonEncode({
+    'dbSha256': dbSha256,
+    'fileLength': fileLength,
+    'mtimeMs': mtimeMs,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _VerifiedSignature &&
+          other.dbSha256 == dbSha256 &&
+          other.fileLength == fileLength &&
+          other.mtimeMs == mtimeMs;
+
+  @override
+  int get hashCode => Object.hash(dbSha256, fileLength, mtimeMs);
+}
+
+_VerifiedSignature? _readCachedSignature(SharedPreferences prefs) {
+  final raw = prefs.getString(_verifiedSignatureKey);
+  if (raw == null) return null;
+  try {
+    final m = jsonDecode(raw);
+    if (m is! Map<String, dynamic>) return null;
+    final sha = m['dbSha256'];
+    final len = m['fileLength'];
+    final mtime = m['mtimeMs'];
+    if (sha is! String || len is! int || mtime is! int) return null;
+    return _VerifiedSignature(dbSha256: sha, fileLength: len, mtimeMs: mtime);
+  } catch (_) {
+    return null;
+  }
 }
 
 Future<Result<void>> _verifyStructural(

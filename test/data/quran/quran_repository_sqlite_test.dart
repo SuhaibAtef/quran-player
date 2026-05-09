@@ -106,6 +106,53 @@ void main() {
       expect(result.valueOrNull!.edition, 'Uthmani');
     });
   }, skip: _skipIfMissing());
+
+  test('unknown surahs.revelation value surfaces as DataAccessFailure '
+      '(no silent meccan coercion)', () async {
+    final tmp = await Directory.systemTemp.createTemp('quran_repo_bad_');
+    addTearDown(() {
+      if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    });
+    final dbPath = p.join(tmp.path, 'bad.sqlite');
+    // Build a synthetic DB WITHOUT the CHECK constraint on revelation,
+    // mirroring what a corrupted/tampered upstream might look like.
+    final db = await databaseFactoryFfi.openDatabase(dbPath);
+    await db.execute(
+      'CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);',
+    );
+    await db.execute('''CREATE TABLE surahs (
+          number INTEGER PRIMARY KEY, name_arabic TEXT NOT NULL,
+          name_latin TEXT NOT NULL, revelation TEXT NOT NULL,
+          ayah_count INTEGER NOT NULL);
+      ''');
+    await db.execute('''CREATE TABLE ayahs (
+          surah INTEGER, ayah INTEGER, text TEXT NOT NULL,
+          PRIMARY KEY(surah, ayah));
+      ''');
+    await db.insert('surahs', {
+      'number': 1,
+      'name_arabic': 'x',
+      'name_latin': 'x',
+      'revelation': 'martian', // bogus value
+      'ayah_count': 1,
+    });
+
+    final manifestRaw = File(_bundledManifestPath).readAsStringSync();
+    final manifest = parseManifest(manifestRaw).valueOrNull!;
+    final badRepo = QuranRepositorySqlite(
+      database: QuranDatabase(db, dbPath),
+      manifest: manifest,
+    );
+
+    final result = await badRepo.getSurah(1);
+    expect(result.failureOrNull, isA<DataAccessFailure>());
+    expect(result.failureOrNull!.message, contains('getSurah'));
+    // The original FormatException from _rowToSurah should surface as the
+    // cause so reviewers can trace back to the bad value.
+    expect(result.failureOrNull!.cause.toString(), contains('martian'));
+
+    await db.close();
+  }, skip: _skipIfMissing());
 }
 
 bool _skipIfMissing() {

@@ -73,7 +73,6 @@ dev_dependencies:
 
   # Maintainer-only build tool (`tool/build_quran_db.dart`). Not shipped at runtime.
   http: ^1.2.2
-  archive: ^3.6.1
   sqlite3: ^2.4.6
 
 # For information on the generic Dart part of this file, see the

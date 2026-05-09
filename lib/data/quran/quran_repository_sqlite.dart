@@ -91,9 +91,19 @@ class QuranRepositorySqlite implements QuranRepository {
 }
 
 Surah _rowToSurah(Map<String, Object?> row) {
-  final revelation = (row['revelation'] as String) == 'medinan'
-      ? Revelation.medinan
-      : Revelation.meccan;
+  final rawRevelation = row['revelation'] as String;
+  final revelation = switch (rawRevelation) {
+    'meccan' => Revelation.meccan,
+    'medinan' => Revelation.medinan,
+    // The schema has CHECK(revelation IN ('meccan','medinan')); reaching this
+    // arm means the DB was tampered with or the constraint was dropped. Fail
+    // loudly — the repository's try/catch wraps this as DataAccessFailure
+    // for the caller.
+    _ => throw FormatException(
+      'invalid surahs.revelation value for surah ${row['number']}: '
+      '"$rawRevelation"',
+    ),
+  };
   return Surah(
     number: row['number'] as int,
     nameArabic: row['name_arabic'] as String,

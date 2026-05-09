@@ -61,6 +61,41 @@ void main() {
     skip: _skipIfMissing(),
   );
 
+  test(
+    'cache invalidates when the on-disk file mtime changes',
+    () async {
+      final ctx = await _ctx();
+      final first = await verifyQuranIntegrity(
+        database: ctx.database,
+        manifest: ctx.manifest,
+        prefs: ctx.prefs,
+      );
+      expect(first.isOk, isTrue);
+      expect(first.valueOrNull!.skippedHash, isFalse);
+
+      // Bump the file's mtime forward without changing its bytes. The cache
+      // must invalidate and force a fresh SHA pass.
+      final path = ctx.database.filePath;
+      final stat = FileStat.statSync(path);
+      final bumped = stat.modified.add(const Duration(seconds: 5));
+      File(path).setLastModifiedSync(bumped);
+
+      final second = await verifyQuranIntegrity(
+        database: ctx.database,
+        manifest: ctx.manifest,
+        prefs: ctx.prefs,
+      );
+      expect(second.isOk, isTrue);
+      expect(
+        second.valueOrNull!.skippedHash,
+        isFalse,
+        reason: 'mtime drift must force a re-hash',
+      );
+      await ctx.cleanup();
+    },
+    skip: _skipIfMissing(),
+  );
+
   test('fails when the on-disk DB is tampered', () async {
     final ctx = await _ctx();
     // Mutate the on-disk file: append a byte. The connection has to be
