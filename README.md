@@ -19,7 +19,7 @@ The goal is a Quran player first — clean, respectful, accurate — with MCP as
 | MVP | Windows desktop |
 | V1 | macOS, Linux |
 
-Android, iOS, and web are not in scope. The mobile/web folders that `flutter create` left behind will be removed once the desktop app stabilizes.
+Android, iOS, and web are not in scope. The mobile/web folders were removed by the `bootstrap-foundation` change ([openspec/changes/bootstrap-foundation/](openspec/changes/bootstrap-foundation/)); reintroducing a target means recreating the folder via `flutter create --platforms=<target> .` and adding a sibling `CLAUDE.md`.
 
 ## Project principles
 
@@ -47,9 +47,38 @@ Flutter Desktop App         Local Quran MCP Server (sidecar)
 
 The MCP server is a local sidecar process — not a network service — so AI clients on the same machine can pull Quran data through a controlled surface.
 
+### Code layout
+
+```
+lib/
+  main.dart                    # bootstrap: logging + SharedPreferences + ProviderScope
+  app/
+    app.dart                   # MaterialApp.router + FTheme builder
+    router/                    # go_router config + path/name constants
+    state/                     # app-wide Riverpod providers (themeMode, prefs)
+    theme/                     # ForUI light/dark + ThemeMode resolver
+    widgets/                   # AppShell (FSidebar / FBottomNavigationBar switch)
+  core/
+    env/                       # AppEnvironment (isDebug, platform helpers)
+    error/                     # sealed Failure + Result<T> = Ok | Err
+    logging/                   # appLogger facade over package:logging
+  features/                    # one folder per top-level area; placeholders today
+    home/  surah_detail/  search/  bookmarks/  settings/  mcp_status/
+  data/                        # repositories — populated by future changes
+  domain/                      # entities + use-cases — populated by future changes
+```
+
+Conventions:
+
+- **State management** — [Riverpod](https://riverpod.dev) (`flutter_riverpod`). Providers live next to the feature; cross-cutting providers live under `lib/app/state/`.
+- **Routing** — [`go_router`](https://pub.dev/packages/go_router). Paths in `RoutePaths`, named routes in `RouteNames` ([`lib/app/router/route_names.dart`](lib/app/router/route_names.dart)).
+- **UI** — [ForUI](https://forui.dev/) `^0.17.0`, anchored on the `zinc` theme variant. Light/dark/system theme mode is persisted via `shared_preferences`. Pinned at 0.17 because 0.18+ requires Flutter 3.41+; bump Flutter first.
+- **Errors** — return `Result<T>` ([`lib/core/error/result.dart`](lib/core/error/result.dart)) at boundaries that can fail; throw only for programmer errors.
+- **Logging** — `appLogger` ([`lib/core/logging/logger.dart`](lib/core/logging/logger.dart)). Configure once in `main()` via `initLogging()`; never `print`.
+
 ## Status
 
-Fresh `flutter create` scaffold; no domain code yet. The [openspec/](openspec/) workspace is wired and waiting for the first proposal. Tracking lives in:
+Foundation in place — ForUI-themed shell with declarative routing, Riverpod state, and a smoke test. No domain code yet (Quran data, audio, search, bookmarks, MCP all land in subsequent OpenSpec changes). Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
