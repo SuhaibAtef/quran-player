@@ -10,6 +10,8 @@ ForUI is the project's UI library ([forui.dev](https://forui.dev/docs)). It ship
 
 This skill captures the wiring, conventions, and gotchas specific to **this project** plus a map for finding upstream docs fast. When in doubt, consult the canonical docs — see [Authoritative references](#authoritative-references).
 
+> **Reference data lives in [INDEX.md](INDEX.md).** SKILL.md (this file) holds the *opinions* — pin choice, theme, when to fall back to Material. INDEX.md holds the *facts* — every theme variant, every public widget's constructor pattern, where `FIcons` lives, and a curated icon list known to exist at the pinned version. Read INDEX.md before grepping the package cache or fetching `llms-full.txt` for "does X exist in 0.17?". Update it (or remove the stale claim) whenever the pin changes.
+
 ## Project-specific constraints
 
 These are the rules that apply *to this repo*. Don't deviate without an explicit reason.
@@ -161,7 +163,11 @@ Most ForUI inputs accept either a managed controller (widget owns state) or a "l
 
 ## Authoritative references
 
-When this skill doesn't answer the question, go to source. ForUI maintains LLM-friendly docs:
+When this skill doesn't answer the question, escalate in this order — local first, network last:
+
+- **[INDEX.md](INDEX.md)** *(local — try first)* — every theme variant, every public widget's constructor pattern, the location of `FIcons` (forui_assets, not forui), curated icon list, and naming-gotcha cheatsheet at the pinned version. Avoids cache-grep and network calls for the questions that come up every session.
+
+When INDEX.md isn't enough, ForUI maintains LLM-friendly docs:
 
 - **Index (small)** — https://forui.dev/docs/llms.txt — list of every page with title + URL.
 - **Full docs (large)** — https://forui.dev/docs/llms-full.txt — every page concatenated as Markdown. Prefer this when you need exact API for a specific widget (e.g. all `FCalendar` props).
