@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/player/widgets/mini_player.dart';
 import '../router/route_names.dart';
 
 class AppShellKeys {
@@ -40,7 +42,7 @@ const _destinations = <_Destination>[
   _Destination(path: RoutePaths.mcpStatus, label: 'MCP', icon: FIcons.plug),
 ];
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({required this.location, required this.child, super.key});
 
   final String location;
@@ -66,36 +68,46 @@ class AppShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selected = _selectedIndex();
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= _wideBreakpoint) {
-          return Row(
+          return Column(
             children: [
-              SizedBox(
-                width: 220,
-                child: FSidebar(
-                  key: AppShellKeys.sidebar,
-                  header: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                    child: Text(
-                      'Quran Companion',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
+              Expanded(
+                child: Row(
                   children: [
-                    for (final (i, dest) in _destinations.indexed)
-                      FSidebarItem(
-                        icon: Icon(dest.icon),
-                        label: Text(dest.label),
-                        selected: i == selected,
-                        onPress: () => _go(context, i),
+                    SizedBox(
+                      width: 220,
+                      child: FSidebar(
+                        key: AppShellKeys.sidebar,
+                        header: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 16,
+                          ),
+                          child: Text(
+                            'Quran Companion',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        children: [
+                          for (final (i, dest) in _destinations.indexed)
+                            FSidebarItem(
+                              icon: Icon(dest.icon),
+                              label: Text(dest.label),
+                              selected: i == selected,
+                              onPress: () => _go(context, i),
+                            ),
+                        ],
                       ),
+                    ),
+                    Expanded(key: AppShellKeys.content, child: child),
                   ],
                 ),
               ),
-              Expanded(key: AppShellKeys.content, child: child),
+              const MiniPlayer(),
             ],
           );
         }
@@ -114,6 +126,7 @@ class AppShell extends StatelessWidget {
                   ),
               ],
             ),
+            const MiniPlayer(),
           ],
         );
       },

@@ -52,9 +52,27 @@ own LICENSE file.
   previous section. Selection, copy, search, and MCP responses always go
   through `QuranRepository` — never through QCF glyph data.
 
+## Audio recitation — Quran.com / Quran Foundation
+
+- **Provider:** Quran.com / Quran Foundation public content API.
+- **API docs:** https://api-docs.quran.com/
+- **Runtime API base:** https://api.quran.com/api/v4
+- **Verse audio CDN base:** https://verses.quran.foundation/
+- **Default reciter:** Mishari Rashid al-`Afasy, Murattal, Quran.com
+  ayah-by-ayah recitation id `7`.
+- **Access model:** unauthenticated HTTPS GET requests to public content
+  endpoints. The Flutter client does not embed developer credentials or API
+  secrets. API errors, including documented rate-limit responses, are treated as
+  recoverable audio failures and do not affect the local Quran text database.
+- **Artwork:** no approved reciter photography is bundled in this change. The
+  app uses neutral local initials/artwork for the player surface.
+- **Source policy:** the API supplies recitation audio only. Quran references,
+  queue ordering, reader labels, and ayah highlighting are validated against the
+  local integrity-checked `QuranRepository`.
+
 ## Notes
 
 - This product is not endorsed by Tanzil or by the King Fahd Complex. We
   make no claim to either party's copyright or trademarks.
 - If a future change introduces additional Quran editions, translations, or
-  audio recitations, a separate entry must be added here in the same change.
+  reciters, a separate entry must be added here in the same change.
