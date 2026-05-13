@@ -13,7 +13,7 @@ Result<Uri> validatePlayableUri(String input, {Uri? baseUri}) {
     return Result.err(InvalidInputFailure('invalid audio URL: $input'));
   }
   final uri = raw.hasScheme ? raw : baseUri?.resolveUri(raw);
-  if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
+  if (uri == null || uri.scheme != 'https') {
     return Result.err(InvalidInputFailure('unsupported audio URL: $input'));
   }
   return Result.ok(uri);
