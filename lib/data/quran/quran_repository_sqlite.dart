@@ -198,12 +198,14 @@ String _normalizeArabicForSearch(String input) {
   return lettersOnly.trim().replaceAll(RegExp(r'\s+'), ' ');
 }
 
+String _quoteFtsTerm(String term) => '"${term.replaceAll('"', '""')}"';
+
 String _toFtsExpression(String normalizedArabic) {
   final terms = normalizedArabic
-      .replaceAll(' ', '')
-      .runes
-      .map((r) => String.fromCharCode(r))
-      .toSet()
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((term) => term.isNotEmpty)
+      .map(_quoteFtsTerm)
       .toList(growable: false);
   return terms.join(' ');
 }
