@@ -66,6 +66,9 @@ dependencies:
   # lib/features/reader/widgets/page_mushaf_view.dart — every other
   # feature reaches the printed-mushaf layout via the MushafLocator seam.
   qcf_quran_plus: ^0.0.8
+  http: ^1.6.0
+  media_kit: ^1.2.6
+  media_kit_libs_audio: ^1.0.7
 
 dev_dependencies:
   flutter_test:
@@ -79,7 +82,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
   # Maintainer-only build tool (`tool/build_quran_db.dart`). Not shipped at runtime.
-  http: ^1.2.2
   sqlite3: ^2.4.6
 
 # For information on the generic Dart part of this file, see the

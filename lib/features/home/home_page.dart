@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/route_names.dart';
 import '../../core/error/result.dart';
 import '../../domain/quran/surah.dart';
+import '../player/state/audio_player_controller.dart';
 import '../surahs/state/surahs_provider.dart';
 
 class HomePageKeys {
@@ -16,6 +17,8 @@ class HomePageKeys {
   static const list = Key('home.surah_list');
   static const loading = Key('home.surah_loading');
   static const error = Key('home.surah_error');
+
+  static Key playSurah(int surah) => ValueKey('home.surah_play.$surah');
 }
 
 class HomePage extends ConsumerWidget {
@@ -82,13 +85,13 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _SurahList extends StatelessWidget {
+class _SurahList extends ConsumerWidget {
   const _SurahList({required this.surahs});
 
   final List<Surah> surahs;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView.builder(
       key: HomePageKeys.list,
       itemCount: surahs.length,
@@ -96,22 +99,38 @@ class _SurahList extends StatelessWidget {
         final s = surahs[i];
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: FTile(
-            key: ValueKey('home.surah_tile.${s.number}'),
-            onPress: () => context.go(RoutePaths.readerAyahFor(s.number, 1)),
-            prefix: SizedBox(
-              width: 32,
-              child: Text(
-                '${s.number}',
-                textAlign: TextAlign.end,
-                style: context.theme.typography.sm,
+          child: Row(
+            children: [
+              Expanded(
+                child: FTile(
+                  key: ValueKey('home.surah_tile.${s.number}'),
+                  onPress: () =>
+                      context.go(RoutePaths.readerAyahFor(s.number, 1)),
+                  prefix: SizedBox(
+                    width: 32,
+                    child: Text(
+                      '${s.number}',
+                      textAlign: TextAlign.end,
+                      style: context.theme.typography.sm,
+                    ),
+                  ),
+                  title: Text(s.nameArabic, textDirection: TextDirection.rtl),
+                  subtitle: Text(
+                    '${s.nameLatin} · ${s.ayahCount} ayahs',
+                    style: context.theme.typography.sm,
+                  ),
+                ),
               ),
-            ),
-            title: Text(s.nameArabic, textDirection: TextDirection.rtl),
-            subtitle: Text(
-              '${s.nameLatin} · ${s.ayahCount} ayahs',
-              style: context.theme.typography.sm,
-            ),
+              const SizedBox(width: 8),
+              FButton(
+                key: HomePageKeys.playSurah(s.number),
+                variant: FButtonVariant.ghost,
+                onPress: () => ref
+                    .read(audioPlayerControllerProvider.notifier)
+                    .startSurah(s.number),
+                child: const Icon(FIcons.play),
+              ),
+            ],
           ),
         );
       },

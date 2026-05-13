@@ -12,6 +12,7 @@ import '../../../app/state/tajweed_provider.dart';
 import '../../../core/logging/logger.dart';
 import '../../../domain/quran/ayah_key.dart';
 import '../../../domain/quran/mushaf_locator.dart';
+import '../../player/state/audio_player_controller.dart';
 
 typedef PageFontLoader = Future<void> Function(int page);
 typedef PagePreloader = Future<void> Function(int page, {int radius});
@@ -78,6 +79,7 @@ class _PageMushafViewState extends ConsumerState<PageMushafView> {
 
   late Future<void> _initialFontReady;
   late int _currentPage = widget.initialPage;
+  int? _lastPlaybackPage;
 
   @override
   void initState() {
@@ -162,6 +164,15 @@ class _PageMushafViewState extends ConsumerState<PageMushafView> {
   Widget build(BuildContext context) {
     final isDark = context.theme.colors.brightness == Brightness.dark;
     final tajweed = ref.watch(tajweedEnabledProvider);
+    final activeAyah = ref.watch(activePlaybackAyahProvider);
+    final activePage = _pageFor(activeAyah);
+    _schedulePlaybackPage(activePage);
+    final highlights = _playbackHighlights(
+      context: context,
+      activeAyah: activeAyah,
+      activePage: activePage,
+    );
+
     return KeyedSubtree(
       key: PageMushafViewKeys.root,
       child: FutureBuilder<void>(
@@ -201,7 +212,7 @@ class _PageMushafViewState extends ConsumerState<PageMushafView> {
                     child: qcf.QuranPageView(
                       key: PageMushafViewKeys.pageView,
                       pageController: _controller,
-                      highlights: const [],
+                      highlights: highlights,
                       isDarkMode: isDark,
                       isTajweed: tajweed,
                       pageBackgroundColor: Colors.transparent,
@@ -220,6 +231,47 @@ class _PageMushafViewState extends ConsumerState<PageMushafView> {
         },
       ),
     );
+  }
+
+  int? _pageFor(AyahKey? key) {
+    if (key == null) return null;
+    try {
+      return qcf.getPageNumber(key.surah, key.ayah);
+    } on Object catch (e) {
+      appLogger.fine('Could not resolve playback ayah page for $key: $e');
+      return null;
+    }
+  }
+
+  List<qcf.HighlightVerse> _playbackHighlights({
+    required BuildContext context,
+    required AyahKey? activeAyah,
+    required int? activePage,
+  }) {
+    if (activeAyah == null || activePage == null) {
+      return const <qcf.HighlightVerse>[];
+    }
+    return [
+      qcf.HighlightVerse(
+        surah: activeAyah.surah,
+        verseNumber: activeAyah.ayah,
+        page: activePage,
+        color: context.theme.colors.primary.withValues(alpha: 0.28),
+      ),
+    ];
+  }
+
+  void _schedulePlaybackPage(int? page) {
+    if (page == null || page == _lastPlaybackPage) return;
+    _lastPlaybackPage = page;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.hasClients || page == _currentPage) return;
+      _controller.animateToPage(
+        page - 1,
+        duration: _animDuration,
+        curve: _animCurve,
+      );
+    });
   }
 }
 
