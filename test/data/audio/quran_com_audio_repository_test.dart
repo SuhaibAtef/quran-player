@@ -25,13 +25,13 @@ void main() {
           return http.Response('''
 {
   "audio_files": [
-    {"verse_key":"1:1","url":"Alafasy/mp3/001001.mp3","duration":6,"format":"mp3","id":1},
-    {"verse_key":"1:2","url":"Alafasy/mp3/001002.mp3","duration":5,"format":"mp3","id":2},
-    {"verse_key":"1:3","url":"Alafasy/mp3/001003.mp3","duration":4,"format":"mp3","id":3},
-    {"verse_key":"1:4","url":"Alafasy/mp3/001004.mp3","duration":4,"format":"mp3","id":4},
-    {"verse_key":"1:5","url":"Alafasy/mp3/001005.mp3","duration":6,"format":"mp3","id":5},
-    {"verse_key":"1:6","url":"Alafasy/mp3/001006.mp3","duration":5,"format":"mp3","id":6},
-    {"verse_key":"1:7","url":"Alafasy/mp3/001007.mp3","duration":13,"format":"mp3","id":7}
+    {"verse_key":"1:1","url":"Minshawi/Murattal/mp3/001001.mp3","duration":4,"format":"mp3","id":49889},
+    {"verse_key":"1:2","url":"Minshawi/Murattal/mp3/001002.mp3","duration":5,"format":"mp3","id":49890},
+    {"verse_key":"1:3","url":"Minshawi/Murattal/mp3/001003.mp3","duration":4,"format":"mp3","id":49891},
+    {"verse_key":"1:4","url":"Minshawi/Murattal/mp3/001004.mp3","duration":4,"format":"mp3","id":49892},
+    {"verse_key":"1:5","url":"Minshawi/Murattal/mp3/001005.mp3","duration":6,"format":"mp3","id":49893},
+    {"verse_key":"1:6","url":"Minshawi/Murattal/mp3/001006.mp3","duration":5,"format":"mp3","id":49894},
+    {"verse_key":"1:7","url":"Minshawi/Murattal/mp3/001007.mp3","duration":13,"format":"mp3","id":49895}
   ]
 }
 ''', 200);

@@ -8,8 +8,8 @@ Verified on 2026-05-13.
 - Provider URL: https://api-docs.quran.com/
 - API base used by the app: https://api.quran.com/api/v4
 - Verse audio CDN base for relative URLs: https://verses.quran.foundation/
-- Default reciter: Mishari Rashid al-`Afasy
-- Quran.com ayah-by-ayah recitation id: `7`
+- Default reciter: Mohamed Siddiq al-Minshawi
+- Quran.com ayah-by-ayah recitation id: `9`
 - Style: Murattal
 - Access method: unauthenticated HTTPS GET against public content endpoints
 - Client secret: none
@@ -17,7 +17,8 @@ Verified on 2026-05-13.
   API documents HTTP 429 `rate_limit_exceeded`, so the app treats it as a
   recoverable network failure and does not retry aggressively.
 - Attribution wording: "Verse audio is streamed from Quran.com / Quran
-  Foundation public content APIs. Default reciter: Mishari Rashid al-`Afasy."
+  Foundation public content APIs. Default reciter: Mohamed Siddiq
+  al-Minshawi."
 
 ## Evidence
 
@@ -30,9 +31,11 @@ Verified on 2026-05-13.
   caps `per_page` at 50 records.
 - Direct request to
   `https://api.quran.com/api/v4/resources/recitations` returned HTTP 200 without
-  authentication and included recitation id `7`, "Mishari Rashid al-`Afasy".
+  authentication and included recitation id `9`, "Mohamed Siddiq
+  al-Minshawi", Murattal. It also includes id `8` for the same reciter in
+  Mujawwad style; the MVP default uses Murattal.
 - Direct request to
-  `https://api.quran.com/api/v4/quran/recitations/7?chapter_number=1&per_page=50&fields=verse_key,url,duration,format,id`
+  `https://api.quran.com/api/v4/quran/recitations/9?chapter_number=1&per_page=50&fields=verse_key,url,duration,format,id`
   returned HTTP 200 without authentication and all seven Al-Fatihah verse audio
   records.
 

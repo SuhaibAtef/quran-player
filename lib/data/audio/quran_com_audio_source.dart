@@ -10,9 +10,9 @@ class QuranComAudioSource {
   );
 
   static const defaultReciter = Reciter(
-    id: 'quran-com-7',
-    sourceId: 7,
-    name: 'Mishari Rashid al-`Afasy',
+    id: 'quran-com-9',
+    sourceId: 9,
+    name: 'Mohamed Siddiq al-Minshawi',
     style: 'Murattal',
   );
 
@@ -22,7 +22,7 @@ class QuranComAudioSource {
     terms: 'Public Quran Foundation content API; no client secret is embedded.',
     attribution:
         'Verse audio is streamed from Quran.com / Quran Foundation public '
-        'content APIs. Default reciter: Mishari Rashid al-`Afasy.',
+        'content APIs. Default reciter: Mohamed Siddiq al-Minshawi.',
     requiresAuth: false,
   );
 }

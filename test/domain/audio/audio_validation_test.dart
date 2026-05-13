@@ -7,14 +7,14 @@ import 'package:quran_player/domain/quran/ayah_key.dart';
 void main() {
   test('validatePlayableUri resolves relative API URLs against base URI', () {
     final result = validatePlayableUri(
-      'Alafasy/mp3/001001.mp3',
+      'Minshawi/Murattal/mp3/001001.mp3',
       baseUri: Uri.parse('https://verses.quran.foundation/'),
     );
 
     expect(result, isA<Ok<Uri>>());
     expect(
       (result as Ok<Uri>).value.toString(),
-      'https://verses.quran.foundation/Alafasy/mp3/001001.mp3',
+      'https://verses.quran.foundation/Minshawi/Murattal/mp3/001001.mp3',
     );
   });
 

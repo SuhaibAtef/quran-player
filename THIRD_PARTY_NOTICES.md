@@ -58,8 +58,8 @@ own LICENSE file.
 - **API docs:** https://api-docs.quran.com/
 - **Runtime API base:** https://api.quran.com/api/v4
 - **Verse audio CDN base:** https://verses.quran.foundation/
-- **Default reciter:** Mishari Rashid al-`Afasy, Murattal, Quran.com
-  ayah-by-ayah recitation id `7`.
+- **Default reciter:** Mohamed Siddiq al-Minshawi, Murattal, Quran.com
+  ayah-by-ayah recitation id `9`.
 - **Access model:** unauthenticated HTTPS GET requests to public content
   endpoints. The Flutter client does not embed developer credentials or API
   secrets. API errors, including documented rate-limit responses, are treated as
