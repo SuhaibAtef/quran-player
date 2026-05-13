@@ -48,3 +48,7 @@ app.*.map.json
 # .claude/settings.json (tracked); .local.json is for individual
 # permission grants and is ignored by convention.
 .claude/settings.local.json
+
+# Codex compatibility mirror. On Windows this is a local junction to
+# .claude/skills so Codex can discover repo skills without duplicating them.
+.agents/
