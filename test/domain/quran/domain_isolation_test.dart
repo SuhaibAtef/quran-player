@@ -11,6 +11,10 @@ const _forbiddenImports = <String>[
   "package:flutter_riverpod/",
   "package:sqflite/",
   "package:sqflite_common_ffi/",
+  // Rendering package belongs in the data layer (single seam in
+  // lib/data/quran/mushaf_locator_qcf.dart). The domain MushafLocator
+  // must stay framework-free.
+  "package:qcf_quran_plus/",
 ];
 
 void main() {

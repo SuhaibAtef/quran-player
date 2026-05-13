@@ -87,4 +87,50 @@ void main() {
     );
     expect(find.text('https://tanzil.net/download/'), findsOneWidget);
   });
+
+  testWidgets('Settings renders the QCF mushaf attribution', (tester) async {
+    await _pump(tester);
+
+    expect(find.byKey(SettingsPageKeys.qcfSection), findsOneWidget);
+    expect(find.text('qcf_quran_plus'), findsOneWidget);
+    expect(find.textContaining('0.0.8'), findsOneWidget);
+  });
+
+  testWidgets('Reader section toggles the mode and persists to prefs', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    expect(find.byKey(SettingsPageKeys.readerSection), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.readerOptionPage), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.readerOptionText), findsOneWidget);
+
+    await tester.tap(find.byKey(SettingsPageKeys.readerOptionText));
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('reader.mode'), 'text');
+
+    await tester.tap(find.byKey(SettingsPageKeys.readerOptionPage));
+    await tester.pumpAndSettle();
+    expect(prefs.getString('reader.mode'), 'page');
+  });
+
+  testWidgets('Tajweed switch defaults off and persists when toggled', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    expect(find.byKey(SettingsPageKeys.readerTajweedSwitch), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('reader.tajweed_enabled'), isNull);
+
+    await tester.tap(find.byKey(SettingsPageKeys.readerTajweedSwitch));
+    await tester.pumpAndSettle();
+    expect(prefs.getBool('reader.tajweed_enabled'), isTrue);
+
+    await tester.tap(find.byKey(SettingsPageKeys.readerTajweedSwitch));
+    await tester.pumpAndSettle();
+    expect(prefs.getBool('reader.tajweed_enabled'), isFalse);
+  });
 }

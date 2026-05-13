@@ -1,181 +1,146 @@
-# ForUI quick index
+# ForUI Reference Index
 
-Companion to [SKILL.md](SKILL.md). Read SKILL.md first — it has the *opinions* (project pin, theme choice, when to fall back to Material). This file is the *reference data* — names, constructors, icon list — so an agent can answer "does X exist in 0.17.0?" without grepping the package cache or hitting the network.
+This index is for Quran Companion's current ForUI stack:
 
-Pinned at `forui: ^0.17.0` and `forui_assets: ^0.17.1`. If the pubspec is bumped, regenerate this file or it will lie.
+- `forui: ^0.21.3` in `pubspec.yaml`
+- `forui_assets: 0.21.0` in `pubspec.lock`
+- Local source: `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui-0.21.3\lib\`
+- Local icons: `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui_assets-0.21.0\lib\src\assets.g.dart`
 
-## Theme variants
+Use this file for fast orientation. For exact constructor arguments, open the
+local source file listed by the `lib/forui.dart` barrel or the upstream
+LLM docs linked from `SKILL.md`.
 
-`FThemes` is a `Never`-extension that exposes nine palettes, each a record with `.light` and `.dark` `FThemeData` fields. Use one consistently — the project uses `zinc`.
+## Project Wiring
 
-| Variant | `FThemes.<name>` |
-|---|---|
-| zinc *(project default)* | `FThemes.zinc.light` / `FThemes.zinc.dark` |
-| slate | `FThemes.slate.light` / `FThemes.slate.dark` |
-| red | `FThemes.red.light` / `FThemes.red.dark` |
-| rose | `FThemes.rose.light` / `FThemes.rose.dark` |
-| orange | `FThemes.orange.light` / `FThemes.orange.dark` |
-| green | `FThemes.green.light` / `FThemes.green.dark` |
-| blue | `FThemes.blue.light` / `FThemes.blue.dark` |
-| yellow | `FThemes.yellow.light` / `FThemes.yellow.dark` |
-| violet | `FThemes.violet.light` / `FThemes.violet.dark` |
+Quran Companion centralizes ForUI theme selection in
+`lib/app/theme/app_theme.dart`:
 
-There is **no** `.touch` / `.desktop` factory in 0.17. (SKILL.md mentions one for newer ForUI; it doesn't exist yet at this pin.)
+```dart
+static FThemeData get light => FThemes.zinc.light.desktop;
+static FThemeData get dark => FThemes.zinc.dark.desktop;
+```
 
-Brightness is **not** auto-resolved — `FTheme(data: ...)` takes a single concrete `FThemeData`. To honour `ThemeMode.system` you must read `MediaQuery.platformBrightnessOf(context)` yourself and pass the right variant. See [`lib/app/theme/app_theme.dart`](../../../lib/app/theme/app_theme.dart) for the project's resolver and [`lib/app/app.dart`](../../../lib/app/app.dart) for how it's wired inside `MaterialApp.builder`.
+`lib/app/app.dart` derives the Material themes from those ForUI desktop themes
+and wraps routes in `FTheme` from `MaterialApp.router.builder`.
 
-## Widget cheat sheet
+Do not hardcode `FThemes.zinc.*` in feature widgets. Read colors, typography,
+spacing, and styles through `context.theme` or the project theme helper.
 
-Every ForUI widget exported by `package:forui/forui.dart` in 0.17.0, grouped by where you'd reach for it. Pattern column lists the *common* required args plus the most useful named args; check the package source or [llms-full.txt](https://forui.dev/docs/llms-full.txt) for the complete signature.
+## Theme Variants
 
-### Page chrome
+`FThemes.<variant>.<brightness>` returns `FPlatformThemeData`, not `FThemeData`.
+Pick `.desktop` for this desktop app, or `.touch` only when a future mobile
+target is intentionally reintroduced.
 
-| Widget | When to reach for it | Pattern |
-|---|---|---|
-| `FScaffold` | Page shell. Always. | `FScaffold({required Widget child, Widget? header, Widget? sidebar, Widget? footer, bool childPad = true})` |
-| `FHeader` | Top bar on root pages. | `FHeader({required Widget title, List<Widget>? suffixes})` |
-| `FHeader.nested` | Top bar on nested pages (centered title, prefix for back). | `FHeader.nested({required Widget title, List<Widget>? prefixes, List<Widget>? suffixes})` |
-| `FDivider` | Horizontal/vertical separator. | `FDivider({Axis axis = Axis.horizontal})` |
-| `FResizable` | Split panes with draggable dividers. | `FResizable({required Axis axis, required List<FResizableRegion> children})` |
+Available variants in ForUI 0.21.3:
 
-### Navigation
+- `FThemes.neutral.light.desktop` / `.touch`
+- `FThemes.neutral.dark.desktop` / `.touch`
+- `FThemes.zinc.light.desktop` / `.touch`
+- `FThemes.zinc.dark.desktop` / `.touch`
+- `FThemes.slate.light.desktop` / `.touch`
+- `FThemes.slate.dark.desktop` / `.touch`
+- `FThemes.blue.light.desktop` / `.touch`
+- `FThemes.blue.dark.desktop` / `.touch`
+- `FThemes.green.light.desktop` / `.touch`
+- `FThemes.green.dark.desktop` / `.touch`
+- `FThemes.orange.light.desktop` / `.touch`
+- `FThemes.orange.dark.desktop` / `.touch`
+- `FThemes.red.light.desktop` / `.touch`
+- `FThemes.red.dark.desktop` / `.touch`
+- `FThemes.rose.light.desktop` / `.touch`
+- `FThemes.rose.dark.desktop` / `.touch`
+- `FThemes.violet.light.desktop` / `.touch`
+- `FThemes.violet.dark.desktop` / `.touch`
+- `FThemes.yellow.light.desktop` / `.touch`
+- `FThemes.yellow.dark.desktop` / `.touch`
 
-| Widget | When | Pattern |
-|---|---|---|
-| `FSidebar` | Desktop side nav (use as `FScaffold.sidebar`, or standalone in a `Row`). | `FSidebar({required List<Widget> children, Widget? header, Widget? footer})` |
-| `FSidebarItem` | Item inside `FSidebar`. | `FSidebarItem({Widget? icon, Widget? label, bool selected, VoidCallback? onPress, List<Widget> children})` |
-| `FBottomNavigationBar` | Phone-style tab bar (use as `FScaffold.footer`, or standalone in a `Column`). | `FBottomNavigationBar({required List<Widget> children, required int index, ValueChanged<int>? onChange})` |
-| `FBottomNavigationBarItem` | Item inside `FBottomNavigationBar`. | `FBottomNavigationBarItem({required Widget icon, Widget? label})` |
-| `FTabs` | In-page tabs. | `FTabs({required List<FTabEntry> children, FTabsController? controller})` |
-| `FBreadcrumb` | Trail of locations. | `FBreadcrumb({required List<FBreadcrumbItem> children})` |
-| `FPagination` | Page navigation for lists. | `FPagination({required FPaginationController controller})` |
+## Public Barrel Exports
 
-### Forms
+`package:forui/forui.dart` exports:
 
-| Widget | When | Pattern |
-|---|---|---|
-| `FButton` | Default action button. | `FButton({required Widget child, VoidCallback? onPress, FButtonStyle Function(FButtonStyle)? style, Widget? prefix, Widget? suffix})` |
-| `FButton.raw` | Button with full custom content. | `FButton.raw({required Widget child, VoidCallback? onPress})` |
-| `FTextField` | Single-line text input. | `FTextField({TextEditingController? controller, String? hint, Widget? label})` |
-| `FTextFormField` | Form-aware text input. | `FTextFormField({String? Function(String?)? validator, ...})` |
-| `FOTPField` | One-time-password digit boxes. | `FOTPField({required int length, ValueChanged<String>? onChange})` |
-| `FAutocomplete` | Text input with suggestion list. | `FAutocomplete<T>({required Iterable<T> Function(String) optionsBuilder, required Widget Function(BuildContext, T) optionBuilder})` |
-| `FCheckbox` | Toggle. | `FCheckbox({required bool value, ValueChanged<bool>? onChange, Widget? label})` |
-| `FRadio` | Single-choice toggle. | `FRadio<T>({required T value, required T groupValue, ValueChanged<T?>? onChange})` |
-| `FSwitch` | Boolean switch (looks like iOS toggle). | `FSwitch({required bool value, ValueChanged<bool>? onChange, Widget? label})` |
-| `FSelect` | Dropdown / combobox. | `FSelect<T>({required List<T> items, T? value, ValueChanged<T?>? onChange, Widget Function(T)? format})` |
-| `FSelectGroup` | Group of radio/checkbox tiles for a single field. | `FSelectGroup<T>({required FSelectGroupController<T> control, required List<FSelectTile<T>> children})` |
-| `FMultiSelect` | Multi-pick dropdown. | `FMultiSelect<T>({required List<T> items, required Set<T> values, ValueChanged<Set<T>>? onChange})` |
-| `FPicker` | Wheel picker. | `FPicker({required List<FPickerWheel> children, FPickerController? controller})` |
-| `FSlider` | Range/value slider. | `FSlider({required FSliderController controller})` |
-| `FDateField` | Inline calendar input. | `FDateField({DateTime? value, ValueChanged<DateTime?>? onChange})` |
-| `FTimeField` | Inline time input. | `FTimeField({FTimeFieldController? controller})` |
-| `FDateTimePicker` | Combined date+time picker. | `FDateTimePicker({DateTime? value, ValueChanged<DateTime?>? onChange})` |
-| `FTimePicker` | Standalone time picker. | `FTimePicker({DateTime? value, ValueChanged<DateTime?>? onChange})` |
-| `FLabel` | Wraps an input with label + helper/error text. | `FLabel({required Widget child, Widget? label, Widget? description})` |
+- Core: `assets.dart`, `foundation.dart`, `localizations.dart`, `theme.dart`
+- Widgets: `accordion`, `autocomplete`, `alert`, `avatar`, `badge`,
+  `bottom_navigation_bar`, `breadcrumb`, `button`, `calendar`, `card`,
+  `checkbox`, `date_field`, `date_time_picker`, `dialog`, `divider`, `header`,
+  `item`, `label`, `line_calendar`, `otp_field`, `pagination`, `picker`,
+  `popover`, `popover_menu`, `progress`, `radio`, `resizable`, `scaffold`,
+  `select`, `select_group`, `select_menu_tile`, `select_tile_group`, `sheet`,
+  `sidebar`, `slider`, `toast`, `switch`, `tabs`, `text_field`, `tile`,
+  `time_picker`, `time_field`, `tooltip`
 
-### Data presentation
+## Widget Map
 
-| Widget | When | Pattern |
-|---|---|---|
-| `FCard` | Bordered container with optional header. | `FCard({required Widget child, Widget? title, Widget? subtitle})` |
-| `FAvatar` | Circular user avatar. | `FAvatar({Widget? child, ImageProvider? image})` |
-| `FBadge` | Small status pill. | `FBadge({required Widget child, FBadgeStyle Function(FBadgeStyle)? style})` |
-| `FAccordion` | Collapsible sections. | `FAccordion({required List<FAccordionItem> children, FAccordionController? controller})` |
-| `FCalendar` | Full calendar view. | `FCalendar({required FCalendarController controller})` |
-| `FLineCalendar` | Single-row date selector. | `FLineCalendar({DateTime? value, ValueChanged<DateTime?>? onChange})` |
-| `FItem` | List row with leading/trailing slots. | `FItem({Widget? prefix, required Widget title, Widget? subtitle, Widget? suffix, VoidCallback? onPress})` |
-| `FItemGroup` | Group of `FItem`s with a shared label/description. | `FItemGroup({required List<FItem> children, Widget? label})` |
+Prefer these before reaching for Material or Cupertino chrome:
 
-### Tile family (settings rows)
+- Layout: `FScaffold`, `FDivider`, `FResizable`
+- Navigation: `FHeader`, `FBottomNavigationBar`, `FSidebar`, `FTabs`,
+  `FBreadcrumb`, `FPagination`
+- Actions: `FButton`, `FButton.raw`
+- Form controls: `FTextField`, `FTextFormField`, `FOTPField`, `FAutocomplete`,
+  `FCheckbox`, `FRadio`, `FSwitch`, `FSelect`, `FSelectGroup`, `FMultiSelect`,
+  `FPicker`, `FSlider`, `FDateField`, `FTimeField`, `FDateTimePicker`,
+  `FTimePicker`, `FLabel`
+- Data display: `FCard`, `FAvatar`, `FBadge`, `FAccordion`, `FCalendar`,
+  `FLineCalendar`, `FItem`, `FItemGroup`
+- Settings/list tiles: `FTile`, `FTileGroup`, `FSelectMenuTile`,
+  `FSelectTileGroup`
+- Overlays: `FDialog`, `FSheet`, `FPopover`, `FPopoverMenu`, `FTooltip`,
+  `FTooltipGroup`, `FToaster`
+- Feedback: `FAlert`, `FProgress`
 
-| Widget | When | Pattern |
-|---|---|---|
-| `FTile` | Settings-screen row. | `FTile({Widget? prefix, required Widget title, Widget? subtitle, Widget? details, Widget? suffix, VoidCallback? onPress})` |
-| `FTileGroup` | Group of tiles with optional header label. | `FTileGroup({required List<FTile> children, Widget? label})` |
-| `FSelectTile` | Tile with selectable state (used inside `FSelectTileGroup`). | `FSelectTile<T>({required Widget title, required T value, Widget? subtitle, Widget? suffix})` |
-| `FSelectTileGroup` | Selectable list of tiles bound to a controller. | `FSelectTileGroup<T>({required List<FSelectTile<T>> children, FSelectGroupController<T>? control})` |
-| `FSelectMenuTile` | Tile that opens a popover menu on tap. | `FSelectMenuTile<T>({required Widget title, required FSelectMenuTileMenu<T> menu})` |
+## API Notes
 
-### Overlays
+- `FButton` styling uses `variant: FButtonVariant.primary | .outline |
+  .secondary | .ghost | .destructive`. The old `FButtonStyle.primary()` style
+  factories are not available at this pin.
+- Use `prefix:` / `suffix:` on `FButton` for icons when the constructor offers
+  them. Use `FButton.raw` only when the standard content slots are insufficient.
+- ForUI localizations must stay registered on `MaterialApp.router` via
+  `FLocalizations.localizationsDelegates` and `FLocalizations.supportedLocales`.
+- `toApproximateMaterialTheme()` is for app chrome and third-party widgets. It
+  is not a reason to use Material buttons, switches, cards, tabs, dialogs, or
+  navigation bars when ForUI has an equivalent.
+- Per-widget style overrides use the widget's generated `*StyleDelta` shape.
+  For larger style work, prefer `dart run forui style create <widget>` and keep
+  the generated style in a narrow, reviewed surface.
 
-| Widget | When | Pattern |
-|---|---|---|
-| `FDialog` | Modal dialog. | `showAdaptiveDialog(context: ..., builder: (_) => FDialog(...))` |
-| `FSheet` | Bottom or side sheet. | `showFSheet(context: ..., builder: (_) => FSheet(...))` |
-| `FPopover` | Anchored popover. | `FPopover({required FPopoverController controller, required Widget popoverBuilder, required Widget child})` |
-| `FPopoverMenu` | Popover with menu items. | `FPopoverMenu({required List<FTile> menu, required Widget child})` |
-| `FTooltip` | Hover/long-press tooltip. | `FTooltip({required String tipBuilder, required Widget child})` |
-| `FToaster` | Toast host (wrap inside `MaterialApp.builder`). | `FToaster({required Widget child})` |
+## Icons
 
-### Feedback
+ForUI's icon data lives in `package:forui_assets`, re-exported through
+`package:forui/forui.dart` as `FIcons`. Use `FIcons.<name>` in ForUI controls.
 
-| Widget | When | Pattern |
-|---|---|---|
-| `FAlert` | Inline status alert. | `FAlert({required Widget title, Widget? subtitle, FAlertStyle Function(FAlertStyle)? style})` |
-| `FProgress` | Linear progress bar. | `FProgress({double? value})` |
+Curated icons verified in `forui_assets-0.21.0`:
 
-## Icons (`FIcons`)
+- Navigation/app: `house`, `search`, `bookmark`, `settings`, `plug`, `list`,
+  `panelLeft`, `panelRight`
+- Reader: `bookOpen`, `chevronLeft`, `chevronRight`
+- Feedback/theme: `triangleAlert`, `sun`, `moon`, `monitor`
+- Audio-ready names: `play`, `pause`, `square`, `skipBack`, `skipForward`,
+  `volume2`
 
-`FIcons` is a class with **1666** static `IconData` members defined in **`forui_assets`** (not `forui`). Names are camelCase mirrors of [Lucide](https://lucide.dev/icons) icon slugs — `book-open` becomes `FIcons.bookOpen`, `circle-check` becomes `FIcons.circleCheck`. The slug-to-name conversion is mechanical: split on `-`, lower-case the first segment, capitalize each subsequent.
+Lucide kebab-case names are converted to lowerCamelCase:
 
-**Common naming gotchas at this version:**
+- `book-open` -> `FIcons.bookOpen`
+- `triangle-alert` -> `FIcons.triangleAlert`
+- `skip-forward` -> `FIcons.skipForward`
+- `volume-2` -> `FIcons.volume2`
 
-- `circleCheck` ✅ — `checkCircle` ✗ (the project's first guess)
-- `circleX` ✅ — `xCircle` ✗
-- `circleAlert` ✅ — `alertCircle` ✗
-- `circleArrowLeft` ✅ — `arrowCircleLeft` ✗
+## Local Lookup
 
-Pattern: when an icon is "thing inside a circle", the prefix is `circle*`, not `*Circle`.
+Useful local files:
 
-### Source
+- Theme variants:
+  `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui-0.21.3\lib\src\theme\themes.dart`
+- Public exports:
+  `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui-0.21.3\lib\forui.dart`
+- Icons:
+  `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui_assets-0.21.0\lib\src\assets.g.dart`
 
-- Generated file: `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui_assets-0.17.1\lib\src\assets.g.dart` (Windows). On macOS/Linux: `~/.pub-cache/hosted/pub.dev/forui_assets-0.17.1/lib/src/assets.g.dart`.
-- To check whether an icon exists by name without grepping: search the slug at <https://lucide.dev/icons>; if Lucide has it, ForUI does too.
+PowerShell examples:
 
-### Curated subset for Quran Companion
-
-Picked from `assets.g.dart` for the IDEA.md MVP feature areas. Use these names verbatim — they are confirmed present in 0.17.1.
-
-**Reading / surahs**
-`book` · `bookOpen` · `bookOpenText` · `bookText` · `bookHeart` · `bookCheck` · `bookmark` · `bookmarkCheck` · `bookmarkPlus` · `bookmarkMinus` · `bookmarkX` · `scrollText` · `pilcrow`
-
-**Audio**
-`play` · `pause` · `square` *(stop)* · `skipBack` · `skipForward` · `rewind` · `fastForward` · `repeat` · `repeat1` · `repeat2` · `shuffle` · `volume` · `volume1` · `volume2` · `volumeX` · `mic` · `headphones` · `music` · `music2` · `audioLines` · `audioWaveform`
-
-**Search**
-`search` · `searchSlash` · `searchX` · `bookSearch` · `filter` · `slidersHorizontal`
-
-**App / nav**
-`house` · `settings` · `settings2` · `userCog` · `info` · `circleHelp` · `chevronLeft` · `chevronRight` · `chevronUp` · `chevronDown` · `arrowLeft` · `arrowRight` · `arrowUpRight` · `menu` · `panelLeft` · `panelLeftOpen` · `panelLeftClose`
-
-**MCP / connectivity**
-`plug` · `plug2` · `plugZap` · `cable` · `network` · `unplug` · `wifi` · `wifiOff` · `serverCog`
-
-**State / status**
-`check` · `circleCheck` · `circleCheckBig` · `x` · `circleX` · `circleAlert` · `triangleAlert` · `circle` · `circleDot` · `circleSlash` · `loader` · `loaderCircle`
-
-**Theme switcher**
-`sun` · `moon` · `monitor` · `sunMoon`
-
-**Misc UI**
-`pencil` · `trash2` · `copy` · `share2` · `download` · `upload` · `plus` · `minus` · `ellipsis` · `ellipsisVertical` · `eye` · `eyeOff` · `lock` · `unlock` · `star` · `heart`
-
-If you need an icon not on this list, search Lucide first and convert the slug. If still unsure, grep `assets.g.dart` directly — but it's almost always faster to check Lucide.
-
-## Common pitfalls (cribbed from SKILL.md, kept here for one-stop scanning)
-
-- **`FTheme` placement.** Put it inside `MaterialApp.builder`, never above `MaterialApp`. Overlays (dialogs, sheets, snack bars, pushed routes) live in a subtree rooted at `MaterialApp` — anything outside is invisible to them.
-- **Brightness.** ForUI 0.17 doesn't read `MediaQuery.platformBrightnessOf` for you. `ThemeMode.system` must be resolved manually in the builder before passing `FThemeData` into `FTheme`.
-- **`FLocalizations`.** Wire `FLocalizations.localizationsDelegates` and `supportedLocales` into `MaterialApp` or date/time pickers crash with locale errors at runtime.
-- **Material vs ForUI.** `toApproximateMaterialTheme()` lets framework chrome (snack bars, third-party Material widgets) inherit close-enough styling, but it is *not* a license to keep using `ElevatedButton`/`Switch`/`AppBar` when ForUI has an equivalent.
-- **Version pin.** `forui: ^0.17.0` is locked because 0.18+ requires Flutter 3.41+. Bumping ForUI requires bumping Flutter first.
-- **`FButton(child: ..., onPress: ...)` formatting.** `dart format` collapses single-arg cases to one line. Don't fight it.
-- **Style overrides.** `style:` is a `Style Function(Style)` callback — mutate the passed-in style with `copyWith`, don't construct one from scratch.
-
-## When this index isn't enough
-
-- **All ~60 widgets, every constructor:** [`forui.dev/docs/llms-full.txt`](https://forui.dev/docs/llms-full.txt) — concatenated full docs. Read once, cache the answer back into this file if a question comes up repeatedly.
-- **Pages by URL:** [`forui.dev/docs/llms.txt`](https://forui.dev/docs/llms.txt) — small index of every page.
-- **CLI to scaffold a custom style:** `dart run forui style create <widget>` (e.g. `scaffold`, `button`).
-- **Source of truth at this pin:** the local cache under `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui-0.17.0\lib\` — the public surface is `lib/forui.dart` (the barrel) and individual `lib/widgets/<name>.dart` re-exports.
+```powershell
+rg -n "class FButton|FButton\\(" "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\forui-0.21.3\lib"
+rg -n "static const bookOpen\\b" "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\forui_assets-0.21.0\lib\src\assets.g.dart"
+```

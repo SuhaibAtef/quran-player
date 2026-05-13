@@ -13,9 +13,8 @@ class BootstrappingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ForUI 0.17 ships only a linear FProgress; circular spinners arrive in
-    // 0.18+. Use the indeterminate linear bar inside a centered, narrow column
-    // so the loading state stays calm instead of a full-bleed bar.
+    // Use the indeterminate linear bar inside a centered, narrow column so
+    // the loading state stays calm instead of a full-bleed bar.
     return FScaffold(
       key: BootstrappingScreenKeys.root,
       child: Center(

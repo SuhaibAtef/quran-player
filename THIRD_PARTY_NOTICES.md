@@ -33,9 +33,28 @@ own LICENSE file.
   the integrity of the bundled SQLite asset on every launch and refuses to
   render Quran data on mismatch.
 
+## Mushaf rendering — qcf_quran_plus + QCF glyph fonts
+
+- **Package:** [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus)
+  v0.0.8 (MIT, copyright Hussein). Source: pub.dev; consumed only by
+  [`lib/data/quran/mushaf_locator_qcf.dart`](lib/data/quran/mushaf_locator_qcf.dart)
+  and [`lib/features/reader/widgets/page_mushaf_view.dart`](lib/features/reader/widgets/page_mushaf_view.dart).
+- **Bundled fonts:** the package ships QCF (King Fahd Glorious Qur'an Complex)
+  glyph fonts and the standard 604-page Madani mushaf metadata. The package's
+  own LICENSE file (MIT) does not separately reproduce the QCF font license.
+- **License status:** maintainer verified during the `mushaf-reader` change
+  that the bundled QCF fonts are allowed for this project and may be
+  redistributed with the desktop app. Keep this attribution with any release
+  that includes the page-mode reader assets.
+
+- **Source policy:** the package supplies *layout and glyphs only*. Canonical
+  Quran text remains the integrity-checked Tanzil corpus described in the
+  previous section. Selection, copy, search, and MCP responses always go
+  through `QuranRepository` — never through QCF glyph data.
+
 ## Notes
 
-- This product is not endorsed by Tanzil. We make no claim to Tanzil's
-  copyright or trademarks.
+- This product is not endorsed by Tanzil or by the King Fahd Complex. We
+  make no claim to either party's copyright or trademarks.
 - If a future change introduces additional Quran editions, translations, or
   audio recitations, a separate entry must be added here in the same change.

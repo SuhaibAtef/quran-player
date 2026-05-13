@@ -1,6 +1,7 @@
 ---
 name: forui
-description: ForUI Flutter widget library — the project's chosen UI toolkit. Use whenever building or editing Flutter UI in this repo: picking a widget (button, scaffold, header, dialog, sheet, tabs, navigation, form input, calendar, list/settings rows, etc.), wiring app-level theming, switching light/dark, adding a new screen or route, fixing ForUI layout/theming issues, or considering whether to reach for Material / Cupertino primitives. Trigger this skill even when the user just describes UI work ("add a settings page", "show a list of surahs", "I want a tab bar") without saying "ForUI" — the project standard is ForUI-first, so the right answer almost always lives here. Do not hand-roll widgets or fall back to Material/Cupertino when a ForUI equivalent exists.
+description: >-
+  ForUI Flutter widget library - the project's chosen UI toolkit. Use whenever building or editing Flutter UI in this repo: picking a widget (button, scaffold, header, dialog, sheet, tabs, navigation, form input, calendar, list/settings rows, etc.), wiring app-level theming, switching light/dark, adding a new screen or route, fixing ForUI layout/theming issues, or considering whether to reach for Material / Cupertino primitives. Trigger this skill even when the user just describes UI work (add a settings page, show a list of surahs, I want a tab bar) without saying ForUI - the project standard is ForUI-first, so the right answer almost always lives here. Do not hand-roll widgets or fall back to Material/Cupertino when a ForUI equivalent exists.
 user-invocable: true
 ---
 
@@ -8,9 +9,7 @@ user-invocable: true
 
 ForUI is the project's UI library ([forui.dev](https://forui.dev/docs)). It ships ~60 shadcn-inspired widgets covering layout, forms, navigation, data presentation, overlays, and feedback.
 
-This skill captures the wiring, conventions, and gotchas specific to **this project** plus a map for finding upstream docs fast. When in doubt, consult the canonical docs — see [Authoritative references](#authoritative-references).
-
-> **Reference data lives in [INDEX.md](INDEX.md).** SKILL.md (this file) holds the *opinions* — pin choice, theme, when to fall back to Material. INDEX.md holds the *facts* — every theme variant, every public widget's constructor pattern, where `FIcons` lives, and a curated icon list known to exist at the pinned version. Read INDEX.md before grepping the package cache or fetching `llms-full.txt` for "does X exist in 0.17?". Update it (or remove the stale claim) whenever the pin changes.
+This skill captures the wiring, conventions, and gotchas specific to **this project** plus a map for finding upstream docs fast. When in doubt, consult the canonical docs — see [Authoritative references](#authoritative-references). Current quick-reference data for the pinned package lives in [INDEX.md](INDEX.md).
 
 ## Project-specific constraints
 
@@ -18,11 +17,11 @@ These are the rules that apply *to this repo*. Don't deviate without an explicit
 
 | Constraint | Value | Why |
 |---|---|---|
-| Pinned version | `forui: ^0.17.0` ([pubspec.yaml](../../../pubspec.yaml#L37)) | ForUI 0.18.0+ requires Flutter 3.41.0+. This project is on 3.38.5 with Dart 3.10.4 ([pubspec.yaml:22](../../../pubspec.yaml#L22)). Bumping ForUI ⇒ bump Flutter first. |
-| Theme | `FThemes.zinc.light` ([lib/main.dart](../../../lib/main.dart)) | Project default. Centralize theme changes — don't hardcode `FThemes.*` in individual widgets. |
-| Material fallback | `theme: FThemes.zinc.light.toApproximateMaterialTheme()` | Lets non-ForUI widgets (`MaterialApp` chrome, third-party Material widgets) inherit close-enough styling. |
+| Pinned version | `forui: ^0.21.3` ([pubspec.yaml](../../../pubspec.yaml#L37)) | Current project pin after the mushaf-reader change. Future bumps may include breaking API changes; centralize ForUI usage in app theme/shell code where practical. |
+| Theme | `FThemes.zinc.light.desktop` ([lib/app/theme/app_theme.dart](../../../lib/app/theme/app_theme.dart)) | Project default. `FThemes.zinc.light` returns platform theme data at this pin; the desktop app resolves `.desktop`. Centralize theme changes — don't hardcode `FThemes.*` in individual widgets. |
+| Material fallback | Material theme derived from the resolved ForUI desktop theme | Lets non-ForUI widgets (`MaterialApp` chrome, third-party Material widgets) inherit close-enough styling. |
 | Localizations | `FLocalizations.localizationsDelegates` + `supportedLocales` registered on `MaterialApp` | Required for ForUI widgets that surface user-facing strings (date pickers, etc.). |
-| Widget choice | Prefer ForUI components over hand-rolled widgets and over `material`/`cupertino` primitives where a ForUI equivalent exists ([CLAUDE.md](../../../CLAUDE.md)). | Consistent design language; cheap to re-skin later. |
+| Widget choice | Prefer ForUI components over hand-rolled widgets and over `material`/`cupertino` primitives where a ForUI equivalent exists ([AGENTS.md](../../../AGENTS.md)). | Consistent design language; cheap to re-skin later. |
 
 If you find yourself reaching for `Scaffold`, `AppBar`, `ElevatedButton`, `TextButton`, `IconButton`, `Drawer`, `BottomNavigationBar`, `TabBar`, `Card`, `AlertDialog`, `BottomSheet`, `Switch`, `Checkbox`, `Radio`, `Slider`, `TextField`, etc. — stop and check the ForUI equivalent first.
 
@@ -35,32 +34,45 @@ The "ForUI-first" rule is about **styled** widgets — components that carry a v
 - **Text and gestures**: `Text`, `RichText`, `GestureDetector`, `InkWell` (only if you actually want a ripple — otherwise prefer ForUI's interactive widgets).
 - **Routing/Navigation infrastructure**: `Navigator`, `MaterialPageRoute`, `Hero`, `PageView`. ForUI is widget-level, not routing-level.
 - **Third-party packages** that ship Material widgets internally — leave them alone, the `toApproximateMaterialTheme` hand-off keeps them visually close.
-- **Material-only behaviors with no ForUI replacement yet** in 0.17 (e.g. specific platform haptics) — use the Material widget and leave a comment so we revisit when ForUI grows the equivalent.
+- **Material-only behaviors with no ForUI replacement yet** in 0.21 (e.g. specific platform haptics) — use the Material widget and leave a comment so we revisit when ForUI grows the equivalent.
 
 Rule of thumb: if the framework primitive has *no* visible chrome or you're using it to compose ForUI widgets together, use it. If it has chrome you can see (border, fill, shadow, ripple, typography), prefer ForUI.
 
 ## Canonical app wiring
 
-The app shell is set up in [lib/main.dart](../../../lib/main.dart). Match this pattern when adding new entry points (e.g. integration test harnesses):
+The app shell is set up in [lib/app/app.dart](../../../lib/app/app.dart), with the concrete theme in [lib/app/theme/app_theme.dart](../../../lib/app/theme/app_theme.dart). Match this pattern when adding new entry points (e.g. integration test harnesses):
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
-class QuranPlayerApp extends StatelessWidget {
+import 'app/router/app_router.dart';
+import 'app/state/theme_mode_provider.dart';
+import 'app/theme/app_theme.dart';
+
+class QuranPlayerApp extends ConsumerWidget {
   const QuranPlayerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Quran Player',
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final router = ref.watch(appRouterProvider);
+
+    return MaterialApp.router(
+      title: 'Quran Companion',
       debugShowCheckedModeBanner: false,
+      themeMode: mode,
+      theme: AppTheme.light.toApproximateMaterialTheme(),
+      darkTheme: AppTheme.dark.toApproximateMaterialTheme(),
       localizationsDelegates: FLocalizations.localizationsDelegates,
       supportedLocales: FLocalizations.supportedLocales,
-      theme: FThemes.zinc.light.toApproximateMaterialTheme(),
-      builder: (context, child) =>
-          FTheme(data: FThemes.zinc.light, child: child!),
-      home: const HomePage(),
+      builder: (context, child) {
+        final platformBrightness = MediaQuery.platformBrightnessOf(context);
+        final theme = AppTheme.resolve(mode, platformBrightness);
+        return FTheme(data: theme, child: child!);
+      },
+      routerConfig: router,
     );
   }
 }
@@ -87,10 +99,10 @@ FScaffold(
 
 ## Theming
 
-- **Brightness is not auto-managed.** Unlike `ThemeData`'s `brightness: Brightness.system`, ForUI does not read `MediaQuery.platformBrightnessOf` for you — `FTheme(data: …)` takes a single concrete theme. To support dark mode you'll need to store the active theme in app state and rebuild `FTheme` when it changes (toggling between `FThemes.zinc.light` and `FThemes.zinc.dark`). When that lands, factor the theme out of `main.dart` into one source of truth (e.g. a `ThemeController`) so the codebase doesn't grow scattered `FThemes.zinc.light` references that all need to be edited together.
-- **Touch vs desktop variants.** Each preset has `.touch` (mobile) and `.desktop` (mouse) variants with different font sizes / paddings. ForUI 0.17 defaults vary; if a widget feels too tight or too loose for the platform, try `FThemes.zinc.light.touch` or `.desktop`.
-- **Customize via `copyWith`** on `FThemeData` rather than building a theme from scratch. Keep all theme overrides in one place so the swap stays cheap (per [CLAUDE.md](../../../CLAUDE.md)).
-- **Per-widget style overrides** use the `style:` parameter, which takes a `Style Function(Style style)` callback. Mutate the passed-in style rather than constructing one. Most widgets also expose a CLI to scaffold a custom style (`dart run forui style create <widget>`).
+- **Brightness is resolved by app state.** Unlike `ThemeData`'s `brightness: Brightness.system`, ForUI does not read `MediaQuery.platformBrightnessOf` for you — `FTheme(data: …)` takes a single concrete theme. Quran Companion stores the selected `ThemeMode` in `themeModeProvider`, then `AppTheme.resolve()` chooses `FThemes.zinc.light.desktop` or `FThemes.zinc.dark.desktop` for `FTheme`.
+- **Touch vs desktop variants.** Each preset has `.touch` (mobile) and `.desktop` (mouse) variants with different font sizes / paddings. This desktop app resolves `.desktop`; if a widget feels too tight or too loose for a future platform, compare the touch/desktop variants deliberately.
+- **Customize via `copyWith`** on `FThemeData` rather than building a theme from scratch. Keep all theme overrides in one place so the swap stays cheap (per [AGENTS.md](../../../AGENTS.md)).
+- **Per-widget style overrides** use the widget's `style:` parameter, usually a generated `*StyleDelta`. Most widgets also expose a CLI to scaffold a custom style (`dart run forui style create <widget>`).
 
 ## Widget map
 
@@ -157,7 +169,7 @@ Most ForUI inputs accept either a managed controller (widget owns state) or a "l
 - `FTheme` placed at the root instead of inside `builder` ⇒ overlays unstyled.
 - Forgetting `FLocalizations.localizationsDelegates` ⇒ runtime errors in date/time pickers.
 - Mixing `Material` widgets where ForUI has an equivalent ⇒ inconsistent look. The `toApproximateMaterialTheme()` is for *third-party* / framework chrome, not an excuse to keep using `ElevatedButton`.
-- Bumping `forui` past 0.17.x ⇒ build will fail until Flutter SDK is upgraded to ≥ 3.41.0.
+- Future ForUI bumps can include breaking API changes. Keep theme and shell wiring centralized, and re-run analyze/tests after any bump.
 - Hardcoding `FThemes.zinc.light` outside of one place ⇒ painful to swap themes later. Read the active theme via `context.theme` instead (`FThemeData` is exposed through an inherited widget by `FTheme`).
 - `dart format` will reformat single-arg `FButton(child: ..., onPress: ...)` to one line. Don't fight it.
 
@@ -184,7 +196,7 @@ When INDEX.md isn't enough, ForUI maintains LLM-friendly docs:
 Local source is also available — when reading the docs is overkill, grep the cached package directly:
 
 ```
-%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui-0.17.0\lib\
+%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\forui-0.21.3\lib\
 ```
 
 The `lib/forui.dart` barrel lists every public widget; each `lib/widgets/<name>.dart` re-exports `lib/src/widgets/<name>.dart` where the implementation and docstring live.

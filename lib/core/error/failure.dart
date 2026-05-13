@@ -61,3 +61,7 @@ class DataAccessFailure extends Failure {
 class DataIntegrityFailure extends Failure {
   const DataIntegrityFailure(super.message, {super.cause, super.stackTrace});
 }
+
+class UnsupportedFailure extends Failure {
+  const UnsupportedFailure(super.message, {super.cause, super.stackTrace});
+}

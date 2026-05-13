@@ -4,8 +4,11 @@ import 'package:forui/forui.dart';
 class AppTheme {
   const AppTheme._();
 
-  static FThemeData get light => FThemes.zinc.light;
-  static FThemeData get dark => FThemes.zinc.dark;
+  // ForUI 0.20+ split each theme into a desktop/touch pair via
+  // `FPlatformThemeData`. Quran Companion is desktop-first, so we always
+  // resolve the desktop variant and let the future mobile push pick `.touch`.
+  static FThemeData get light => FThemes.zinc.light.desktop;
+  static FThemeData get dark => FThemes.zinc.dark.desktop;
 
   static FThemeData resolve(ThemeMode mode, Brightness platformBrightness) {
     return switch (mode) {
