@@ -144,6 +144,27 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('Search page ignores onSubmit while a search is pending', (
+    tester,
+  ) async {
+    final repo = _PendingSearchRepository();
+    await _pumpSearch(tester, repo);
+
+    await tester.enterText(find.byKey(SearchPageKeys.input), 'الله');
+    await tester.tap(find.byKey(SearchPageKeys.submit));
+    await tester.pump();
+
+    expect(find.byKey(SearchPageKeys.loading), findsOneWidget);
+    expect(repo.searchCalls, 1);
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    expect(repo.searchCalls, 1);
+
+    repo.completer.complete(const Result.ok([]));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('Search page renders repository results', (tester) async {
     final repo = FakeQuranRepository(
       surahs: _surahs,

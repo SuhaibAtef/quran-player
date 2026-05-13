@@ -17,6 +17,10 @@ class QuranSearchController extends Notifier<QuranSearchState> {
   QuranSearchState build() => const QuranSearchState.idle();
 
   Future<void> submit(String query) async {
+    if (state.isLoading) {
+      return;
+    }
+
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       state = const QuranSearchState.invalid(
