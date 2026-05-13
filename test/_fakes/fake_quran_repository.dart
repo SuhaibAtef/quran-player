@@ -4,6 +4,7 @@ import 'package:quran_player/domain/quran/ayah.dart';
 import 'package:quran_player/domain/quran/ayah_key.dart';
 import 'package:quran_player/domain/quran/quran_repository.dart';
 import 'package:quran_player/domain/quran/quran_source.dart';
+import 'package:quran_player/domain/quran/quran_search_result.dart';
 import 'package:quran_player/domain/quran/surah.dart';
 
 /// Minimal in-memory repository for widget tests. The shape is correct; the
@@ -12,13 +13,16 @@ class FakeQuranRepository implements QuranRepository {
   FakeQuranRepository({
     List<Surah>? surahs,
     Map<AyahKey, Ayah>? ayahs,
+    Result<List<QuranSearchResult>>? searchResult,
     QuranSource? source,
   }) : _surahs = surahs ?? _defaultSurahs,
        _ayahs = ayahs ?? const {},
+       _searchResult = searchResult,
        _source = source ?? _defaultSource;
 
   final List<Surah> _surahs;
   final Map<AyahKey, Ayah> _ayahs;
+  final Result<List<QuranSearchResult>>? _searchResult;
   final QuranSource _source;
 
   static final QuranSource _defaultSource = QuranSource(
@@ -79,6 +83,44 @@ class FakeQuranRepository implements QuranRepository {
     final a = _ayahs[key];
     if (a == null) return Result.err(NotFoundFailure('ayah $key not in fake'));
     return Result.ok(a);
+  }
+
+  @override
+  Future<Result<List<QuranSearchResult>>> searchAyahs(
+    String query, {
+    int limit = 50,
+  }) async {
+    if (_searchResult != null) return _searchResult;
+
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      return const Result.err(InvalidInputFailure('search query is empty'));
+    }
+
+    final results = <QuranSearchResult>[];
+    for (final ayah in _ayahs.values) {
+      if (!ayah.text.contains(trimmed)) continue;
+      final surah = _surahs.firstWhere(
+        (s) => s.number == ayah.key.surah,
+        orElse: () => Surah(
+          number: ayah.key.surah,
+          nameArabic: 'سورة ${ayah.key.surah}',
+          nameLatin: 'Surah ${ayah.key.surah}',
+          revelation: Revelation.meccan,
+          ayahCount: 1,
+        ),
+      );
+      results.add(
+        QuranSearchResult(
+          key: ayah.key,
+          text: ayah.text,
+          surahNameArabic: surah.nameArabic,
+          surahNameLatin: surah.nameLatin,
+        ),
+      );
+      if (results.length >= limit) break;
+    }
+    return Result.ok(results);
   }
 
   @override

@@ -6,6 +6,7 @@ import '../../domain/quran/ayah.dart';
 import '../../domain/quran/ayah_key.dart';
 import '../../domain/quran/quran_repository.dart';
 import '../../domain/quran/quran_source.dart';
+import '../../domain/quran/quran_search_result.dart';
 import '../../domain/quran/surah.dart';
 import 'manifest.dart';
 import 'quran_database.dart';
@@ -85,6 +86,57 @@ class QuranRepositorySqlite implements QuranRepository {
   }
 
   @override
+  Future<Result<List<QuranSearchResult>>> searchAyahs(
+    String query, {
+    int limit = 50,
+  }) async {
+    final normalized = _normalizeSearchQuery(query);
+    if (normalized.isEmpty) {
+      return const Result.err(InvalidInputFailure('search query is empty'));
+    }
+    final normalizedArabic = _normalizeArabicForSearch(normalized);
+    if (normalizedArabic.isEmpty) {
+      return const Result.err(InvalidInputFailure('search query is empty'));
+    }
+    if (limit < 1 || limit > 100) {
+      return Result.err(
+        InvalidInputFailure('search limit must be between 1 and 100'),
+      );
+    }
+
+    try {
+      final rows = await _db.rawQuery(
+        '''
+        SELECT
+          a.surah,
+          a.ayah,
+          a.text,
+          s.name_arabic,
+          s.name_latin
+        FROM ayah_fts f
+        JOIN ayahs a ON a.rowid = f.rowid
+        JOIN surahs s ON s.number = a.surah
+        WHERE ayah_fts MATCH ?
+        ORDER BY bm25(ayah_fts), a.surah, a.ayah
+        ''',
+        [_toFtsExpression(normalizedArabic)],
+      );
+      final results = <QuranSearchResult>[];
+      for (final row in rows) {
+        final text = row['text'] as String;
+        if (!_normalizeArabicForSearch(text).contains(normalizedArabic)) {
+          continue;
+        }
+        results.add(_rowToSearchResult(row));
+        if (results.length >= limit) break;
+      }
+      return Result.ok(results);
+    } catch (e, st) {
+      return Result.err(_dbErr('searchAyahs failed: $e', e, st));
+    }
+  }
+
+  @override
   Future<Result<QuranSource>> getSource() async {
     return Result.ok(manifest.source);
   }
@@ -118,6 +170,42 @@ Ayah _rowToAyah(Map<String, Object?> row) {
     key: AyahKey(row['surah'] as int, row['ayah'] as int),
     text: row['text'] as String,
   );
+}
+
+QuranSearchResult _rowToSearchResult(Map<String, Object?> row) {
+  return QuranSearchResult(
+    key: AyahKey(row['surah'] as int, row['ayah'] as int),
+    text: row['text'] as String,
+    surahNameArabic: row['name_arabic'] as String,
+    surahNameLatin: row['name_latin'] as String,
+  );
+}
+
+String _normalizeSearchQuery(String query) {
+  return query.trim().replaceAll(RegExp(r'\s+'), ' ');
+}
+
+String _normalizeArabicForSearch(String input) {
+  final withoutMarks = input
+      .replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '')
+      .replaceAll(RegExp('[أإآٱ]'), 'ا')
+      .replaceAll('ى', 'ي')
+      .replaceAll('ـ', ' ');
+  final lettersOnly = withoutMarks.replaceAll(
+    RegExp(r'[^\u0621-\u064A\u0660-\u0669\u06F0-\u06F9 ]'),
+    ' ',
+  );
+  return lettersOnly.trim().replaceAll(RegExp(r'\s+'), ' ');
+}
+
+String _toFtsExpression(String normalizedArabic) {
+  final terms = normalizedArabic
+      .replaceAll(' ', '')
+      .runes
+      .map((r) => String.fromCharCode(r))
+      .toSet()
+      .toList(growable: false);
+  return terms.join(' ');
 }
 
 DataAccessFailure _dbErr(String message, Object cause, StackTrace st) =>

@@ -9,13 +9,14 @@ Foundation in place — **Quran Companion**, a desktop Quran player paired with 
 What's wired today (after `bootstrap-foundation` and `quran-data-layer`):
 
 - ForUI-themed app shell with light/dark/system mode and persistent selection ([lib/app/](lib/app/)).
-- `go_router` declarative routing with placeholder pages for every top-level area in IDEA.md MVP — Home/Surahs, Search, Bookmarks, Settings, MCP Status ([lib/features/](lib/features/)).
+- `go_router` declarative routing for every top-level area in IDEA.md MVP — Home/Surahs, Search, Bookmarks, Settings, MCP Status ([lib/features/](lib/features/)).
 - Riverpod state, `Result`/`Failure` types in [lib/core/error/](lib/core/error/), and an `appLogger` facade in [lib/core/logging/](lib/core/logging/).
 - **Quran data layer** — bundled SQLite asset ([assets/quran/quran.sqlite](assets/quran/quran.sqlite)) of the Tanzil Uthmani edition (114 surahs / 6,236 ayahs), produced by [tool/build_quran_db.dart](tool/build_quran_db.dart). Domain contracts in [lib/domain/quran/](lib/domain/quran/), SQLite-backed implementation in [lib/data/quran/](lib/data/quran/), runtime fail-closed integrity check, and a Riverpod `quranBootstrapProvider` that the router consumes. Surahs page now renders the real list. Source attribution surfaces in Settings; full credits in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - **Mushaf reader** — drill-down from the Surahs list with two render modes: a printed-mushaf page view backed by [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus) (default) and a continuous text scroll backed by `QuranRepository`. Persisted toggle in Settings. Three deep-link routes: `/reader/page/{n}`, `/reader/surah/{n}`, `/reader/ayah/{s}/{a}` (the third redirects into whichever mode is active). Framework-free `MushafLocator` ([lib/domain/quran/mushaf_locator.dart](lib/domain/quran/mushaf_locator.dart)) + QCF-backed implementation ([lib/data/quran/mushaf_locator_qcf.dart](lib/data/quran/mushaf_locator_qcf.dart)) is the seam future audio/search/bookmark/MCP changes use to drive the reader without importing the rendering package directly. If `qcf_quran_plus` ever fails to initialize, the reader degrades to text mode for the session and shows a non-fatal banner — never the data-integrity fatal screen.
+- **Basic Quran search** — Search page queries Arabic canonical Quran text through `QuranRepository.searchAyahs()`, backed by the bundled SQLite `ayah_fts` index. Results show trustworthy ayah references, surah names, and Tanzil text, then open the existing `/reader/ayah/{s}/{a}` deep link so reader-mode routing stays centralized. MVP search is intentionally narrow: Arabic canonical text only, no translation, tafsir, fuzzy matching, semantic search, search history, or query persistence.
 - Smoke + integration + widget tests guarding shell, navigation, theme switch, unknown-route redirect, the data-layer integrity check, the repository contract against the real bundled DB, the QCF locator + import-boundary, reader routes (page/surah/ayah deep links + redirects to / for malformed input), the Surahs-list → reader handoff, the graceful-degrade banner, and Settings toggles ([test/](test/)).
 
-What's not yet implemented: audio, search UX (FTS5 index exists), bookmarks, MCP server. Each lands in its own OpenSpec change against this foundation.
+What's not yet implemented: audio, bookmarks, MCP server. Each lands in its own OpenSpec change against this foundation.
 
 - Dart SDK constraint: `^3.11.0` ([pubspec.yaml:22](pubspec.yaml#L22)). Flutter 3.41+. Bumped during the `mushaf-reader` change to unblock `qcf_quran_plus` (which also lifted the old ForUI 0.17 pin).
 - Platforms shipped: Windows (MVP), macOS, Linux. `android/`, `ios/`, `web/` were removed; recreate via `flutter create --platforms=<target> .` if a future change reintroduces one.
@@ -29,7 +30,7 @@ lib/
   main.dart                # logging + SharedPreferences + ProviderScope bootstrap
   app/                     # composition: router, theme, app-wide state, shell chrome
   core/                    # cross-cutting: env, error/Result, logging
-  features/<area>/         # one folder per top-level area (Surahs + Reader are wired to data; others are placeholders)
+  features/<area>/         # one folder per top-level area (Surahs, Search + Reader are wired to data; others are placeholders)
   features/reader/         # mushaf reader: ReaderScreen + PageMushafView (qcf_quran_plus) + TextReaderView
   domain/quran/            # framework-free contracts (Surah, Ayah, AyahKey, QuranSource, QuranRepository, MushafLocator)
   data/quran/              # SQLite-backed implementation + QcfMushafLocator (the only file allowed to import qcf_quran_plus, alongside features/reader/widgets/page_mushaf_view.dart)

@@ -105,6 +105,42 @@ void main() {
       expect(result.valueOrNull!.name, 'Tanzil');
       expect(result.valueOrNull!.edition, 'Uthmani');
     });
+
+    test('searchAyahs returns canonical results for an Arabic query', () async {
+      final result = await repo.searchAyahs('الله');
+      expect(result.isOk, isTrue);
+      final results = result.valueOrNull!;
+      expect(results, isNotEmpty);
+      expect(results.first.key.surah, inInclusiveRange(1, 114));
+      expect(results.first.key.ayah, greaterThan(0));
+      expect(results.first.text, contains('ٱللَّه'));
+      expect(results.first.surahNameArabic, isNotEmpty);
+      expect(results.first.surahNameLatin, isNotEmpty);
+    });
+
+    test('searchAyahs rejects empty input', () async {
+      final result = await repo.searchAyahs('   ');
+      expect(result.failureOrNull, isA<InvalidInputFailure>());
+    });
+
+    test('searchAyahs bounds results by the requested limit', () async {
+      final result = await repo.searchAyahs('الله', limit: 2);
+      expect(result.isOk, isTrue);
+      expect(result.valueOrNull, hasLength(2));
+    });
+
+    test('searchAyahs rejects invalid limits', () async {
+      final result = await repo.searchAyahs('الله', limit: 0);
+      expect(result.failureOrNull, isA<InvalidInputFailure>());
+    });
+
+    test(
+      'searchAyahs handles punctuation without raw SQLite failures',
+      () async {
+        final result = await repo.searchAyahs('الله،');
+        expect(result.failureOrNull, isNot(isA<DataAccessFailure>()));
+      },
+    );
   }, skip: _skipIfMissing());
 
   test('unknown surahs.revelation value surfaces as DataAccessFailure '
