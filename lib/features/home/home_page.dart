@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app/router/route_names.dart';
 import '../../core/error/result.dart';
 import '../../domain/quran/surah.dart';
 import '../surahs/state/surahs_provider.dart';
@@ -95,6 +97,8 @@ class _SurahList extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: FTile(
+            key: ValueKey('home.surah_tile.${s.number}'),
+            onPress: () => context.go(RoutePaths.readerAyahFor(s.number, 1)),
             prefix: SizedBox(
               width: 32,
               child: Text(

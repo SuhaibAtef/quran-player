@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.4
+  sdk: ^3.11.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -36,8 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # UI library — see .claude/skills/forui/SKILL.md for project conventions.
-  # Pinned at ^0.17 because 0.18+ requires Flutter 3.41 (project is on 3.38.5).
-  forui: ^0.17.0
+  # Bumped to ^0.21 alongside the Flutter 3.41 / Dart 3.11 upgrade
+  # (carried by the mushaf-reader change to unblock qcf_quran_plus).
+  forui: ^0.21.3
 
   # State management.
   flutter_riverpod: ^2.6.1
@@ -59,6 +60,12 @@ dependencies:
 
   # SHA-256 for runtime integrity verification of the bundled DB.
   crypto: ^3.0.6
+
+  # Visual mushaf rendering (QCF glyph fonts + page metadata).
+  # Used only by lib/data/quran/mushaf_locator_qcf.dart and
+  # lib/features/reader/widgets/page_mushaf_view.dart — every other
+  # feature reaches the printed-mushaf layout via the MushafLocator seam.
+  qcf_quran_plus: ^0.0.8
 
 dev_dependencies:
   flutter_test:

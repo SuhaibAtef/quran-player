@@ -2,15 +2,23 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/error/result.dart';
+import '../../data/quran/mushaf_locator_provider.dart';
+import '../../data/quran/providers.dart';
+import '../../domain/quran/ayah_key.dart';
+import '../../domain/quran/mushaf_locator.dart';
 import '../../features/_errors/bootstrapping_screen.dart';
 import '../../features/_errors/data_integrity_screen.dart';
 import '../../features/bookmarks/bookmarks_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/mcp_status/mcp_status_page.dart';
+import '../../features/reader/reader_screen.dart';
 import '../../features/search/search_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/surah_detail/surah_detail_page.dart';
 import '../state/quran_integrity_provider.dart';
+import '../state/reader_mode.dart';
+import '../state/reader_mode_provider.dart';
 import '../widgets/app_shell.dart';
 import 'route_names.dart';
 
@@ -55,6 +63,7 @@ GoRouter buildAppRouter(Ref ref) {
       };
       if (known.contains(path)) return null;
       if (path.startsWith('/surahs/')) return null;
+      if (path.startsWith('/reader/')) return null;
       return RoutePaths.home;
     },
     routes: [
@@ -105,10 +114,88 @@ GoRouter buildAppRouter(Ref ref) {
             name: RouteNames.mcpStatus,
             builder: (context, state) => const McpStatusPage(),
           ),
+          GoRoute(
+            path: RoutePaths.readerPagePattern,
+            name: RouteNames.readerPage,
+            redirect: (context, state) {
+              final n = int.tryParse(state.pathParameters['pageNumber'] ?? '');
+              if (n == null || n < 1 || n > kMushafPageCount) {
+                return RoutePaths.home;
+              }
+              return null;
+            },
+            builder: (context, state) {
+              final n = int.parse(state.pathParameters['pageNumber']!);
+              final anchor = _parseAnchor(state.uri.queryParameters['anchor']);
+              return ReaderScreen(
+                target: PageReaderTarget(pageNumber: n, anchor: anchor),
+              );
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.readerSurahPattern,
+            name: RouteNames.readerSurah,
+            redirect: (context, state) {
+              final n = int.tryParse(state.pathParameters['surahNumber'] ?? '');
+              if (n == null || n < 1 || n > 114) {
+                return RoutePaths.home;
+              }
+              return null;
+            },
+            builder: (context, state) {
+              final n = int.parse(state.pathParameters['surahNumber']!);
+              final anchor = _parseAnchor(state.uri.queryParameters['anchor']);
+              return ReaderScreen(
+                target: SurahReaderTarget(surahNumber: n, anchor: anchor),
+              );
+            },
+          ),
+          GoRoute(
+            path: RoutePaths.readerAyahPattern,
+            name: RouteNames.readerAyah,
+            redirect: (context, state) async {
+              final s = int.tryParse(state.pathParameters['surah'] ?? '');
+              final a = int.tryParse(state.pathParameters['ayah'] ?? '');
+              if (s == null || a == null) return RoutePaths.home;
+              final keyResult = AyahKey.tryNew(s, a);
+              if (keyResult is Err<AyahKey>) return RoutePaths.home;
+              final key = (keyResult as Ok<AyahKey>).value;
+
+              final ayahResult = await ref
+                  .read(quranRepositoryProvider)
+                  .getAyah(key);
+              if (ayahResult is Err) return RoutePaths.home;
+
+              final status = ref.read(mushafLocatorProvider);
+              final anchorParam = '$s:$a';
+              if (status.usingFallback) {
+                // Page rendering unavailable; route the repository-validated
+                // ayah to text mode.
+                return '${RoutePaths.readerSurahFor(s)}'
+                    '?anchor=$anchorParam';
+              }
+              final pageRes = status.locator.pageForAyah(key);
+              if (pageRes is Err<int>) return RoutePaths.home;
+              final mode = ref.read(readerModeProvider);
+              if (mode == ReaderMode.page) {
+                final page = (pageRes as Ok<int>).value;
+                return '${RoutePaths.readerPageFor(page)}'
+                    '?anchor=$anchorParam';
+              }
+              return '${RoutePaths.readerSurahFor(s)}?anchor=$anchorParam';
+            },
+            builder: (context, state) =>
+                const SizedBox.shrink(), // never reached: redirect always hits
+          ),
         ],
       ),
     ],
   );
+}
+
+AyahKey? _parseAnchor(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  return AyahKey.parse(raw).valueOrNull;
 }
 
 class _RouteErrorRedirect extends StatelessWidget {

@@ -1,9 +1,10 @@
 ---
 name: flutter-add-widget-preview
-description: Adds interactive widget previews to the project using the previews.dart system. Use when creating new UI components or updating existing screens to ensure consistent design and interactive testing.
+description: >-
+  Adds interactive widget previews to the project using the previews.dart system. Use when creating new UI components or updating existing screens to ensure consistent design and interactive testing.
 metadata:
-  model: models/gemini-3.1-pro-preview
-  last_modified: Tue, 21 Apr 2026 20:05:23 GMT
+  model: "models/gemini-3.1-pro-preview"
+  last_modified: "Tue, 21 Apr 2026 20:05:23 GMT"
 ---
 # Previewing Flutter Widgets
 
