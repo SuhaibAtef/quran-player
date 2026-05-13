@@ -8,6 +8,7 @@ import '../../app/state/reader_mode_provider.dart';
 import '../../app/state/tajweed_provider.dart';
 import '../../app/state/theme_mode_provider.dart';
 import '../../core/error/result.dart';
+import '../../data/audio/quran_com_audio_source.dart';
 import '../../domain/quran/quran_source.dart';
 import 'state/quran_source_provider.dart';
 
@@ -31,6 +32,7 @@ class SettingsPageKeys {
   static const sourceLicense = Key('settings.source.license');
   static const sourceUrl = Key('settings.source.url');
   static const qcfSection = Key('settings.qcf_section');
+  static const audioSection = Key('settings.audio_section');
 }
 
 class SettingsPage extends ConsumerWidget {
@@ -82,14 +84,54 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
+          if (brightness == Brightness.dark)
+            const SizedBox(key: SettingsPageKeys.darkOnlyMarker, height: 1),
           const SizedBox(height: 16),
           const _ReaderModeSection(),
           const SizedBox(height: 16),
           const _QuranSourceSection(),
           const SizedBox(height: 16),
+          const _AudioAttributionSection(),
+          const SizedBox(height: 16),
           const _QcfAttributionSection(),
-          if (brightness == Brightness.dark)
-            const SizedBox(key: SettingsPageKeys.darkOnlyMarker, height: 1),
+        ],
+      ),
+    );
+  }
+}
+
+class _AudioAttributionSection extends StatelessWidget {
+  const _AudioAttributionSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final small = context.theme.typography.sm;
+    final reciter = QuranComAudioSource.defaultReciter;
+    final source = QuranComAudioSource.attribution;
+    return Container(
+      key: SettingsPageKeys.audioSection,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Audio source',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            source.providerName,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Default reciter: ${reciter.name} (${reciter.style})',
+            style: small,
+          ),
+          Text(source.terms, style: small),
+          Text(source.providerUrl, style: small),
         ],
       ),
     );
