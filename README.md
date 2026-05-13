@@ -8,7 +8,7 @@ The goal is a Quran player first — clean, respectful, accurate — with MCP as
 
 - **Read** the Quran with accurate Arabic text and visible source attribution.
 - **Listen** to high-quality recitations with play, pause, seek, next, and previous.
-- **Search** ayahs and surahs locally.
+- **Search** Arabic ayah text locally.
 - **Bookmark** and resume.
 - **Expose** Quran data over MCP so AI clients can `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, and `list_reciters` without hallucinating references.
 
@@ -83,7 +83,7 @@ Conventions:
 
 ## Status
 
-Foundation, Quran data layer, mushaf reader, and the first audio-player foundation are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. Search UX, bookmarks, and the MCP server each land in subsequent OpenSpec changes against this foundation. Tracking lives in:
+Foundation, Quran data layer, mushaf reader, audio-player foundation, and basic Quran search are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. Bookmarks and the MCP server each land in subsequent OpenSpec changes against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
@@ -115,6 +115,10 @@ Quran Companion bundles only verified, attributed text. Full credits live in [TH
 - **Text:** **Tanzil's Uthmani plain text** (114 surahs, 6,236 ayahs), distributed under the [Tanzil Quran Text License](https://tanzil.net/docs/tanzil_license) — verbatim redistribution + attribution required, modification forbidden. The bundled SQLite asset is byte-deterministic and integrity-checked at every launch; if the check fails, the app refuses to render Quran data.
 - **Audio:** verse audio streams from the Quran.com / Quran Foundation public content API using ayah-by-ayah recitation id `9`, Mohamed Siddiq al-Minshawi. Runtime audio playback requires network access today. Surah queues are opened as a single preloaded playlist for smoother ayah-to-ayah playback. The player consumes resolved playable URIs through `AudioRepository`, so a future download manager can replace remote URLs with local cached files without changing player UI.
 - **Mushaf rendering:** [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus) (MIT) supplies QCF (King Fahd Glorious Qur'an Complex) glyph fonts and the standard 604-page Madani mushaf metadata used by the reader's page mode. **Layout and glyphs only** — canonical text always comes from Tanzil above. The QCF font license status and attribution are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Search limitations
+
+MVP search is intentionally basic and trustworthy: it searches only the bundled Arabic Tanzil text through SQLite FTS. It does not search translations, tafsir, transliteration, semantic meaning, fuzzy variants, or saved search history.
 
 ## Building the Quran DB
 
