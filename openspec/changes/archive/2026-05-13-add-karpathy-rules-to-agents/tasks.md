@@ -33,6 +33,6 @@
 
 ## 6. Commit, PR, archive
 
-- [ ] 6.1 Commit on `chore/add-karpathy-rules-to-agents`. Commit message: short imperative title plus a one-paragraph body explaining motivation and the 200-line cap.
-- [ ] 6.2 Open a PR against `develop` via `gh pr create` (use the full path on Windows: `& "C:\Program Files\GitHub CLI\gh.exe" pr create --base develop ...`). PR body should link this OpenSpec change and call out that it is docs-only.
-- [ ] 6.3 After merge, run `/opsx:archive` (skill `openspec-archive-change`) on `add-karpathy-rules-to-agents` to move the change into `openspec/changes/archive/` and promote `specs/agent-guidance/spec.md` into `openspec/specs/agent-guidance/spec.md`.
+- [x] 6.1 Commit on `chore/add-karpathy-rules-to-agents`. Commit message: short imperative title plus a one-paragraph body explaining motivation and the 200-line cap. *(Committed as `e9bd883` on `chore/update-agents-md` — see deviation in 1.2.)*
+- [x] 6.2 Open a PR against `develop` via `gh pr create` (use the full path on Windows: `& "C:\Program Files\GitHub CLI\gh.exe" pr create --base develop ...`). PR body should link this OpenSpec change and call out that it is docs-only. *(PR: https://github.com/SuhaibAtef/quran-player/pull/15.)*
+- [x] 6.3 ~~After merge,~~ run `/opsx:archive` (skill `openspec-archive-change`) on `add-karpathy-rules-to-agents` to move the change into `openspec/changes/archive/` and promote `specs/agent-guidance/spec.md` into `openspec/specs/agent-guidance/spec.md`. *Deviation:* archived pre-merge on this same branch at user request, so the archive lands as a second commit on PR #15 rather than as a follow-up after merge.
