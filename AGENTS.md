@@ -97,7 +97,7 @@ Invoke via `/<skill-name>` when the work matches. All live under [.claude/skills
 - **ForUI** ([.claude/skills/forui/SKILL.md](.claude/skills/forui/SKILL.md)) — UI-library reference: current pin (`forui: ^0.21.3`), desktop theme wiring (`FThemes.zinc.light.desktop` + `toApproximateMaterialTheme()` + `FLocalizations`), widget/export map, `FIcons` location (`forui_assets`), pointers to ForUI LLM docs. Check [.claude/skills/forui/INDEX.md](.claude/skills/forui/INDEX.md) before grepping the package cache.
 - **OpenSpec** — spec-driven pipeline: `/openspec-explore` → `/openspec-propose` → `/openspec-apply-change` → `/openspec-archive-change`. The spec is the source of truth — update it when scope shifts, then re-implement against it.
 - **Impeccable** — frontend quality bar: design audits, visual hierarchy, accessibility, motion, copy, theming. Run after a feature lands to polish, or before a redesign to plan. Out of scope: backend-only or non-UI logic.
-- **agent-browser** — browser automation. Use whenever the task involves driving a real browser (visual regression for the web build, smoke-testing a deployed PWA, scraping recitation metadata). The skill's `SKILL.md` documents the workflow and commands — start there rather than guessing flags.
+- **agent-browser** — browser automation. Use whenever the task involves driving a real browser (visual regression for the web build, smoke-testing a deployed PWA, scraping recitation metadata). Run `agent-browser skills get core` for the actual workflow and command reference (or `agent-browser skills get --full` if you need the expanded version) rather than guessing flags.
 
 ## Hooks
 
