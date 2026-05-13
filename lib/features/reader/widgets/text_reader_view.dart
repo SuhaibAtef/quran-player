@@ -39,9 +39,15 @@ class TextReaderView extends ConsumerStatefulWidget {
 class _TextReaderViewState extends ConsumerState<TextReaderView> {
   final _itemKeys = <int, GlobalKey>{};
   bool _scrollScheduled = false;
+  AyahKey? _lastPlaybackScroll;
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AyahKey?>(activePlaybackAyahProvider, (_, active) {
+      _schedulePlaybackScroll(active);
+    });
+    _schedulePlaybackScroll(ref.watch(activePlaybackAyahProvider));
+
     final repo = ref.watch(quranRepositoryProvider);
     final future = repo.getSurahAyahs(widget.surahNumber);
 
@@ -88,6 +94,23 @@ class _TextReaderViewState extends ConsumerState<TextReaderView> {
         ctx,
         duration: const Duration(milliseconds: 220),
         alignment: 0.1,
+      );
+    });
+  }
+
+  void _schedulePlaybackScroll(AyahKey? active) {
+    if (active == null || active.surah != widget.surahNumber) return;
+    if (_lastPlaybackScroll == active) return;
+    _lastPlaybackScroll = active;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final key = _itemKeys[active.ayah];
+      final ctx = key?.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 220),
+        alignment: 0.18,
       );
     });
   }

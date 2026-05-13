@@ -83,7 +83,7 @@ Conventions:
 
 ## Status
 
-Foundation, Quran data layer, mushaf reader, and the first audio-player foundation are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and highlights the active ayah in text mode. Search UX, bookmarks, and the MCP server each land in subsequent OpenSpec changes against this foundation. Tracking lives in:
+Foundation, Quran data layer, mushaf reader, and the first audio-player foundation are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. Search UX, bookmarks, and the MCP server each land in subsequent OpenSpec changes against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
