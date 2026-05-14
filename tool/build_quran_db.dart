@@ -17,6 +17,8 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
+import 'package:quran_player/data/quran/arabic_normalization.dart';
+
 const _defaultSourceUrl = 'https://api.alquran.cloud/v1/quran/quran-uthmani';
 
 // Pinned SHA-256 of the canonicalised text payload (see [_canonicalText]).
@@ -244,11 +246,14 @@ void _writeDatabase({
       );
     ''');
     db.execute('CREATE INDEX idx_ayahs_surah ON ayahs(surah);');
+    // Contentless FTS5: we populate it manually with alef-wasla / hamza /
+    // alef-maksura normalised text so a query for plain "الله" matches the
+    // bundled "ٱللَّه" tokens. unicode61's remove_diacritics step strips
+    // shadda/fatha but does NOT fold ٱ → ا, so query-only normalisation
+    // (the previous design) silently failed for the most common queries.
     db.execute('''
       CREATE VIRTUAL TABLE ayah_fts USING fts5(
         text,
-        content='ayahs',
-        content_rowid='rowid',
         tokenize='unicode61 remove_diacritics 2'
       );
     ''');
@@ -290,19 +295,26 @@ void _writeDatabase({
     db.execute('COMMIT');
     surahInsert.dispose();
 
-    // Insert ayahs.
+    // Insert ayahs. The ayahs table is rowid-based; SQLite auto-assigns
+    // sequential rowids starting at 1 in the order we INSERT, and we insert
+    // in sorted (surah, ayah) order — so ayah rowids are deterministic and
+    // line up 1:1 with the FTS rows we populate next.
     final ayahInsert = db.prepare(
       'INSERT INTO ayahs(surah, ayah, text) VALUES (?, ?, ?)',
     );
+    final ftsInsert = db.prepare(
+      'INSERT INTO ayah_fts(rowid, text) VALUES (?, ?)',
+    );
     db.execute('BEGIN');
+    var rowid = 1;
     for (final a in ayahs) {
       ayahInsert.execute([a.surah, a.ayah, a.text]);
+      ftsInsert.execute([rowid, normalizeArabicForSearch(a.text)]);
+      rowid++;
     }
     db.execute('COMMIT');
     ayahInsert.dispose();
-
-    // Populate FTS5 external-content index from the ayahs content table.
-    db.execute("INSERT INTO ayah_fts(ayah_fts) VALUES('rebuild');");
+    ftsInsert.dispose();
 
     db.execute('VACUUM;');
   } finally {

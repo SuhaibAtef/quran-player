@@ -8,14 +8,14 @@
     "distribution": "Distributed via Islamic Network alquran.cloud API.",
     "fetchUrl": "https://api.alquran.cloud/v1/quran/quran-uthmani",
     "license": "Tanzil Quran Text License (non-commercial, attribution). See https://tanzil.net/docs/tanzil_license",
-    "retrievedAtUtc": "2026-05-09T16:58:47.594750Z"
+    "retrievedAtUtc": "2026-05-14T00:47:20.369072Z"
   },
   "counts": {
     "surahs": 114,
     "ayahs": 6236
   },
   "checksums": {
-    "dbSha256": "116a9d46a3a754e5b9cbff7bb40a383d108c49018786360b6fb08d00524d436d",
+    "dbSha256": "296c99781688b83cae597da1b81ff5a59842a0f5ec897ebfd0dcdca5639ad724",
     "textSha256": "5e6accd845ed3668a0ed45937a4626957b1f38d05598e3df573c6ad39fb45621"
   }
 }
