@@ -254,6 +254,7 @@ void _writeDatabase({
     db.execute('''
       CREATE VIRTUAL TABLE ayah_fts USING fts5(
         text,
+        content='',
         tokenize='unicode61 remove_diacritics 2'
       );
     ''');
