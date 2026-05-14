@@ -1,0 +1,19 @@
+name: quran_mcp_server
+description: >-
+  Loopback-only MCP server for Quran Companion. Bundled as a Dart workspace
+  member of the main Flutter app; consumes QuranRepository and AudioRepository
+  via constructor injection. Flutter-free by design — no widgets, no Riverpod,
+  no SharedPreferences imports cross the package boundary.
+publish_to: 'none'
+version: 0.0.1
+
+environment:
+  sdk: ^3.11.0
+
+resolution: workspace
+
+dependencies: {}
+
+dev_dependencies:
+  test: ^1.25.0
+  flutter_lints: ^6.0.0

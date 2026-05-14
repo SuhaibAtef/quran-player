@@ -21,6 +21,9 @@ version: 1.0.0+1
 environment:
   sdk: ^3.11.0
 
+workspace:
+  - packages/quran_mcp_server
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -89,6 +92,11 @@ dev_dependencies:
 
   # Maintainer-only build tool (`tool/build_quran_db.dart`). Not shipped at runtime.
   sqlite3: ^2.4.6
+
+  # Used by test/workspace_member_test.dart to parse the root pubspec.yaml and
+  # assert the workspace declaration. Test-only — available transitively at
+  # runtime, but imported explicitly here for test analyzer clarity.
+  yaml: ^3.1.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

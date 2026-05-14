@@ -1,11 +1,11 @@
 ## 1. Workspace package scaffold (D3 / I1)
 
-- [ ] 1.1 Create `packages/quran_mcp_server/pubspec.yaml` with `name: quran_mcp_server`, Dart SDK `^3.11.0`, no Flutter dependency.
-- [ ] 1.2 Create empty `packages/quran_mcp_server/lib/quran_mcp_server.dart` as the public entry point.
-- [ ] 1.3 Add `workspace:` entry to root `pubspec.yaml` listing `packages/quran_mcp_server`.
-- [ ] 1.4 Run `flutter pub get` and confirm the workspace resolves cleanly with no warnings about the new package.
-- [ ] 1.5 Add `packages/quran_mcp_server/test/isolation_test.dart` that recursively scans `packages/quran_mcp_server/lib/` and asserts no file imports `package:flutter/`, `package:flutter_riverpod/`, `package:shared_preferences/`, `package:quran_player/features/`, or `package:quran_player/app/`. Initially passes vacuously. (Spec R1)
-- [ ] 1.6 Add `test/workspace_member_test.dart` (host-app side) that parses `pubspec.yaml` as YAML and asserts the `workspace:` list contains `packages/quran_mcp_server`. (Spec R2)
+- [x] 1.1 Create `packages/quran_mcp_server/pubspec.yaml` with `name: quran_mcp_server`, Dart SDK `^3.11.0`, no Flutter dependency.
+- [x] 1.2 Create empty `packages/quran_mcp_server/lib/quran_mcp_server.dart` as the public entry point.
+- [x] 1.3 Add `workspace:` entry to root `pubspec.yaml` listing `packages/quran_mcp_server`.
+- [x] 1.4 Run `flutter pub get` and confirm the workspace resolves cleanly with no warnings about the new package.
+- [x] 1.5 Add `packages/quran_mcp_server/test/isolation_test.dart` that recursively scans `packages/quran_mcp_server/lib/` and asserts no file imports `package:flutter/`, `package:flutter_riverpod/`, `package:shared_preferences/`, `package:quran_player/features/`, or `package:quran_player/app/`. Initially passes vacuously. (Spec R1)
+- [x] 1.6 Add `test/workspace_member_test.dart` (host-app side) that parses `pubspec.yaml` as YAML and asserts the `workspace:` list contains `packages/quran_mcp_server`. (Spec R2)
 
 ## 2. Move shared MCP types into the workspace package (D3)
 
