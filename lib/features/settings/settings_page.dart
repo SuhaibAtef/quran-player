@@ -10,12 +10,15 @@ import '../../app/state/theme_mode_provider.dart';
 import '../../core/error/result.dart';
 import '../../data/audio/quran_com_audio_source.dart';
 import '../../domain/quran/quran_source.dart';
+import '../../domain/tafsir/tafsir_source.dart';
 import 'state/quran_source_provider.dart';
+import 'state/tafsir_source_provider.dart';
 
 class SettingsPageKeys {
   const SettingsPageKeys._();
 
   static const title = Key('settings.title');
+  static const list = Key('settings.list');
   static const themeSection = Key('settings.theme_section');
   static const themeOptionLight = Key('settings.theme.light');
   static const themeOptionDark = Key('settings.theme.dark');
@@ -31,6 +34,12 @@ class SettingsPageKeys {
   static const sourceVersion = Key('settings.source.version');
   static const sourceLicense = Key('settings.source.license');
   static const sourceUrl = Key('settings.source.url');
+  static const tafsirSection = Key('settings.tafsir_section');
+  static const tafsirName = Key('settings.tafsir.name');
+  static const tafsirPublisher = Key('settings.tafsir.publisher');
+  static const tafsirVersion = Key('settings.tafsir.version');
+  static const tafsirLicense = Key('settings.tafsir.license');
+  static const tafsirUrl = Key('settings.tafsir.url');
   static const qcfSection = Key('settings.qcf_section');
   static const audioSection = Key('settings.audio_section');
 }
@@ -49,6 +58,7 @@ class SettingsPage extends ConsumerWidget {
         title: Text('Settings', key: SettingsPageKeys.title),
       ),
       child: ListView(
+        key: SettingsPageKeys.list,
         children: [
           Container(
             key: SettingsPageKeys.themeSection,
@@ -90,6 +100,8 @@ class SettingsPage extends ConsumerWidget {
           const _ReaderModeSection(),
           const SizedBox(height: 16),
           const _QuranSourceSection(),
+          const SizedBox(height: 16),
+          const _TafsirSourceSection(),
           const SizedBox(height: 16),
           const _AudioAttributionSection(),
           const SizedBox(height: 16),
@@ -353,6 +365,84 @@ class _QuranSourceCard extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(source.url, key: SettingsPageKeys.sourceUrl, style: smallStyle),
+      ],
+    );
+  }
+}
+
+class _TafsirSourceSection extends ConsumerWidget {
+  const _TafsirSourceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(tafsirSourceProvider);
+    return Container(
+      key: SettingsPageKeys.tafsirSection,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Tafsir source',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: FProgress(),
+            ),
+            error: (e, st) => Text("Couldn't load attribution: $e"),
+            data: (result) => switch (result) {
+              Ok(:final value) => _TafsirSourceCard(source: value),
+              Err(:final failure) => Text(
+                "Couldn't load attribution: ${failure.message}",
+              ),
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TafsirSourceCard extends StatelessWidget {
+  const _TafsirSourceCard({required this.source});
+
+  final TafsirSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final smallStyle = context.theme.typography.sm;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          source.name,
+          key: SettingsPageKeys.tafsirName,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          source.publisher,
+          key: SettingsPageKeys.tafsirPublisher,
+          style: smallStyle,
+        ),
+        Text(
+          'Version ${source.version}',
+          key: SettingsPageKeys.tafsirVersion,
+          style: smallStyle,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          source.license,
+          key: SettingsPageKeys.tafsirLicense,
+          style: smallStyle,
+        ),
+        const SizedBox(height: 4),
+        Text(source.url, key: SettingsPageKeys.tafsirUrl, style: smallStyle),
       ],
     );
   }

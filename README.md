@@ -113,6 +113,7 @@ If you don't have `just` installed, the underlying `flutter`/`dart` commands wor
 Quran Companion bundles only verified, attributed text. Full credits live in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 - **Text:** **Tanzil's Uthmani plain text** (114 surahs, 6,236 ayahs), distributed under the [Tanzil Quran Text License](https://tanzil.net/docs/tanzil_license) — verbatim redistribution + attribution required, modification forbidden. The bundled SQLite asset is byte-deterministic and integrity-checked at every launch; if the check fails, the app refuses to render Quran data.
+- **Tafsir:** **al-Muyassar** by the [King Fahd Complex for the Printing of the Holy Quran](https://qurancomplex.gov.sa/) (6,236 ayah-level commentaries in Arabic). Free non-commercial redistribution with attribution; no modification. Fetched at maintainer build time from the MIT-licensed [`spa5k/tafsir_api`](https://github.com/spa5k/tafsir_api) mirror at a pinned commit SHA recorded in [tool/build_tafsir_db.dart](tool/build_tafsir_db.dart). Bundled as a separate SQLite asset with its own manifest and integrity check (including an orphan-ayah cross-check against the Quran DB). Data-only in this release — no UI consumer yet.
 - **Audio:** verse audio streams from the Quran.com / Quran Foundation public content API using ayah-by-ayah recitation id `9`, Mohamed Siddiq al-Minshawi. Runtime audio playback requires network access today. Surah queues are opened as a single preloaded playlist for smoother ayah-to-ayah playback. The player consumes resolved playable URIs through `AudioRepository`, so a future download manager can replace remote URLs with local cached files without changing player UI.
 - **Mushaf rendering:** [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus) (MIT) supplies QCF (King Fahd Glorious Qur'an Complex) glyph fonts and the standard 604-page Madani mushaf metadata used by the reader's page mode. **Layout and glyphs only** — canonical text always comes from Tanzil above. The QCF font license status and attribution are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
@@ -129,6 +130,16 @@ just build-quran-db
 ```
 
 The tool downloads the pinned Tanzil Uthmani edition (currently via the [Islamic Network alquran.cloud API](https://alquran.cloud/api), which redistributes Tanzil's `quran-uthmani`), verifies its SHA-256 against an in-source pin, builds the database, and writes the manifest. Re-running with the same upstream produces a byte-identical DB. Commit `quran.sqlite` and `manifest.json` together — the manifest's `dbSha256` is the runtime tamper detector. Network access is required only for this maintainer step; the runtime app is fully offline.
+
+## Building the tafsir DB
+
+`assets/tafsir/muyassar.sqlite` and `assets/tafsir/manifest.json` are produced by [tool/build_tafsir_db.dart](tool/build_tafsir_db.dart). To rebuild:
+
+```sh
+just build-tafsir-db
+```
+
+The tool downloads 114 per-surah JSON files from `spa5k/tafsir_api` at the pinned commit SHA recorded in the tool source, validates that the parsed entry count is exactly 6,236 and that every `(surah, ayah)` key resolves against the bundled Quran DB, then writes the database and its sibling manifest. The Quran DB must exist first — run `just build-quran-db` if you're starting from a clean checkout. Re-running with the same pin produces a byte-identical DB. Commit `muyassar.sqlite` and `manifest.json` together.
 
 ## Contributing
 

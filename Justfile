@@ -60,3 +60,9 @@ check: format analyze test
 # Requires network access. Idempotent: re-running produces a byte-identical DB.
 build-quran-db:
     dart run tool/build_quran_db.dart
+
+# Maintainer-only: rebuild assets/tafsir/muyassar.sqlite + manifest.json from
+# the pinned commit of spa5k/tafsir_api. Requires `assets/quran/quran.sqlite`
+# to exist already (the tool cross-checks ayah keys against it). Idempotent.
+build-tafsir-db:
+    dart run tool/build_tafsir_db.dart

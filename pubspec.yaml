@@ -98,6 +98,8 @@ flutter:
   assets:
     - assets/quran/quran.sqlite
     - assets/quran/manifest.json
+    - assets/tafsir/muyassar.sqlite
+    - assets/tafsir/manifest.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

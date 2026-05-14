@@ -42,7 +42,7 @@ void main() {
     test('replaces Latin and ASCII punctuation with spaces', () {
       expect(normalizeArabicForSearch('الله،'), 'الله');
       expect(normalizeArabicForSearch('hello الله world'), 'الله');
-      expect(normalizeArabicForSearch('الله,!?' ), 'الله');
+      expect(normalizeArabicForSearch('الله,!?'), 'الله');
     });
 
     test('returns empty for whitespace-only input', () {

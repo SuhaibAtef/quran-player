@@ -11,11 +11,13 @@ import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/quran/integrity_checker.dart';
 import 'package:quran_player/data/quran/manifest.dart';
 import 'package:quran_player/data/quran/providers.dart';
+import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/quran_source.dart';
 import 'package:quran_player/features/home/home_page.dart';
 import 'package:quran_player/features/settings/settings_page.dart';
 
 import '../../_fakes/fake_quran_repository.dart';
+import '../../_fakes/fake_tafsir_bootstrap.dart';
 
 final QuranSource _fixture = QuranSource(
   name: 'Tanzil',
@@ -59,6 +61,9 @@ Future<void> _pump(WidgetTester tester) async {
         quranBootstrapProvider.overrideWith(
           (ref) async => Result.ok(_bootstrap()),
         ),
+        tafsirBootstrapProvider.overrideWith(
+          (ref) async => Result.ok(fakeTafsirBootstrap()),
+        ),
         quranRepositoryProvider.overrideWithValue(repo),
       ],
       child: const App(),
@@ -88,8 +93,34 @@ void main() {
     expect(find.text('https://tanzil.net/download/'), findsOneWidget);
   });
 
+  testWidgets('Settings renders tafsir source attribution', (tester) async {
+    await _pump(tester);
+
+    expect(find.byKey(SettingsPageKeys.tafsirSection), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.tafsirName), findsOneWidget);
+    // Fixture comes from fakeTafsirBootstrap()'s default TafsirSource:
+    // name=TestTafsir, publisher=Test Publisher, version=test, url=about:blank.
+    expect(find.text('TestTafsir'), findsOneWidget);
+    expect(find.text('Test Publisher'), findsOneWidget);
+    expect(find.text('Version test'), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.tafsirUrl), findsOneWidget);
+  });
+
   testWidgets('Settings renders the QCF mushaf attribution', (tester) async {
     await _pump(tester);
+
+    // The QCF section lives at the bottom of the Settings ListView; scroll it
+    // into the viewport before asserting on it (otherwise the lazy list has
+    // not built it yet).
+    final scrollable = find.descendant(
+      of: find.byKey(SettingsPageKeys.list),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(SettingsPageKeys.qcfSection),
+      400,
+      scrollable: scrollable,
+    );
 
     expect(find.byKey(SettingsPageKeys.qcfSection), findsOneWidget);
     expect(find.text('qcf_quran_plus'), findsOneWidget);
