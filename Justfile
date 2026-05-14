@@ -36,6 +36,10 @@ test-file FILE:
 test-name NAME:
     flutter test --name "{{NAME}}"
 
+# Smoke-test the local MCP contract, playback approval bridge, and MCP Status UI.
+mcp-smoke:
+    flutter test test/data/mcp/mcp_server_service_test.dart test/data/mcp/mcp_http_server_test.dart test/data/mcp/mcp_import_boundary_test.dart test/features/player/mcp_playback_bridge_test.dart test/features/mcp_status/mcp_status_page_test.dart
+
 # List connected devices and emulators
 devices:
     flutter devices
