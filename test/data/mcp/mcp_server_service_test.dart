@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quran_player/core/error/failure.dart';
 import 'package:quran_player/core/error/result.dart';
-import 'package:quran_player/data/mcp/mcp_protocol_handler.dart';
 import 'package:quran_player/data/mcp/mcp_server_service.dart';
 import 'package:quran_player/domain/mcp/mcp_error.dart';
 import 'package:quran_player/domain/mcp/mcp_playback_bridge.dart';
@@ -112,23 +111,6 @@ void main() {
 
       expect(bridge.applied.single.type, McpPlaybackCommandType.playSurah);
       expect(bridge.applied.single.surah, 1);
-    });
-  });
-
-  group('McpProtocolHandler', () {
-    test('handles JSON-RPC tool and resource fixture requests', () async {
-      final handler = McpProtocolHandler(_service());
-
-      final tools = await handler.handleLine(
-        '{"jsonrpc":"2.0","id":1,"method":"tools/list"}',
-      );
-      expect(tools, contains('search_quran'));
-
-      final ayah = await handler.handleLine(
-        '{"jsonrpc":"2.0","id":2,"method":"tools/call",'
-        '"params":{"name":"get_ayah","arguments":{"surah":2,"ayah":255}}}',
-      );
-      expect(ayah, contains('2:255'));
     });
   });
 }

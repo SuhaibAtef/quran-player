@@ -2,7 +2,7 @@
 
 Quran Companion already has the foundations needed for the MCP surface in IDEA.md: an integrity-checked Tanzil SQLite asset, a framework-free `QuranRepository`, Arabic text search through `searchAyahs`, one approved default reciter behind the audio domain contract, and a player controller that can play surahs/ayahs through the app shell. The shell also has a top-level MCP Status route, but it is still a placeholder.
 
-This change turns those seams into a local MCP server with two modes:
+This change turns those seams into an in-app local MCP server with two modes:
 
 ```text
 Mode A: read-only Quran and reciter data
@@ -17,17 +17,18 @@ Stakeholders: users who want AI clients to query local verified Quran data and d
 
 **Goals:**
 
-- Ship a local-only MCP server for the five read-only tools, five resources, and six playback tools named in IDEA.md.
+- Ship an in-app local-only MCP server for the five read-only tools, five resources, and six playback tools named in IDEA.md.
+- Let the user start/stop the server from MCP Status and copy a localhost URL plus bearer token into local LLM/MCP clients.
 - Reuse existing verified domain repositories and player controller seams instead of adding parallel data or playback paths.
 - Validate tool/resource inputs strictly and map all expected failures to structured MCP errors.
 - Require explicit user approval before `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, or `set_repeat` can change player state.
 - Surface MCP server lifecycle, local-only mode, playback permission state, and recent command decisions in the existing MCP Status screen.
-- Keep the server safe to run from approved local MCP clients without arbitrary file, network-listening, or shell capabilities.
+- Keep the server safe to run from approved local MCP clients without arbitrary file, non-loopback listener, or shell capabilities.
 - Cover the tool/resource/playback contract with automated tests and sample client-style request fixtures.
 
 **Non-Goals:**
 
-- Remote/socket MCP access.
+- Remote or non-loopback MCP access.
 - Tafsir, semantic search, translations, bookmarks, or persistent audit logs over MCP.
 - Any mutation of Quran text, reciter metadata, settings, bookmarks, or source attribution.
 - General religious Q&A, generated explanations, or model-authored Quran references.
@@ -36,17 +37,17 @@ Stakeholders: users who want AI clients to query local verified Quran data and d
 
 ## Decisions
 
-### Use local-only MCP transports
+### Use authenticated local Streamable HTTP from inside the app
 
-The MCP server will support local client use only. Read-only Mode A can run as a stdio sidecar process. Playback Mode B must bridge into the running Flutter app/player and therefore requires app availability before a command can execute. No part of this change will bind a remote TCP, UDP, WebSocket, or public named-pipe listener.
+The MCP server will start inside the Flutter app from MCP Status using the `mcp_server` Dart package's Streamable HTTP transport. It will bind only to loopback (`127.0.0.1`) and require a generated bearer token. MCP Status will show the URL and token while running. No part of this change will bind a remote TCP, UDP, WebSocket, or public named-pipe listener.
 
-Why: stdio is the safest MCP launch model for local data access, while playback control necessarily belongs to the running app because `media_kit` player state lives there. Keeping both surfaces local satisfies IDEA.md's privacy and no-remote-access rules.
+Why: the user needs to use the server from local LLM/MCP clients, and playback control belongs in the running app because `media_kit` player state lives there. Loopback Streamable HTTP with a bearer token is usable by local clients while preserving IDEA.md's no-remote-access rule.
 
-Alternative considered: expose a localhost HTTP/WebSocket server for both modes. That is easier for app-to-server messaging but creates origin, port, firewall, and authentication questions that are out of scope for the MVP.
+Alternative considered: stdio sidecar only. That works for some MCP clients but cannot bridge playback approvals into the running Flutter app without a second IPC layer, and it leaves the MCP Status page unable to show a usable client URL/token.
 
 ### Split read-only service from playback bridge
 
-Implementation should add a protocol layer that routes read-only calls to a framework-free MCP data service and playback calls to a small app bridge that depends on existing player commands. Tool handlers must not import Flutter widgets or build UI directly; the UI consumes lifecycle and permission state through providers.
+Implementation should add an `mcp_server` adapter that routes read-only calls to the existing MCP data service and playback calls to a small app bridge that depends on existing player commands. Tool handlers must not import Flutter widgets or build UI directly; the UI starts/stops the server and consumes lifecycle and permission state through providers.
 
 Why: `QuranRepository` was designed for non-UI consumers, while playback needs app runtime state. Splitting the services keeps Quran data query behavior usable even when playback is unavailable, and makes denial/unavailable errors explicit.
 
@@ -90,24 +91,24 @@ Alternative considered: leave MCP Status as a simple enabled/disabled display. T
 - Client expectations differ by MCP version -> Add request/response fixture tests for initialization, tool listing, resource listing, and every read/playback operation.
 - Playback bridge needs app runtime state -> Return an explicit `app_unavailable` or `player_unavailable` error when the app is not running or cannot accept commands.
 - Approval prompts can deadlock MCP clients -> Define a bounded pending state and return a timeout/denied error if the user does not approve in time.
-- Sidecar packaging can diverge by platform -> Start with Windows/dev launch documented by a Justfile recipe, then keep macOS/Linux packaging as follow-up if needed.
+- Local ports can collide -> Bind to loopback on a preferred port with fallback/random local ports and display the actual URL in MCP Status.
+- Token exposure in UI is sensitive -> Generate a fresh high-entropy token per server start and show it only while running.
 - Large `get_surah` responses may be heavy -> Return full surahs because they are bounded, but do not stream generated summaries.
 - Search queries can contain FTS syntax or hostile input -> Continue relying on `QuranRepository.searchAyahs` normalization/escaping and add MCP-level schema bounds before calling it.
 - Status page could imply the server is remotely discoverable -> Copy and labels must say local-only mode and must not mention remote access.
 
 ## Migration Plan
 
-1. Add the MCP data service, DTOs, validation, and local protocol entrypoint behind tests.
+1. Add the MCP data service, DTOs, validation, and authenticated local `mcp_server` adapter behind tests.
 2. Add the playback bridge, permission state model, and player command handlers behind tests.
 3. Replace the MCP Status placeholder with lifecycle, capability, and approval UI.
-4. Add Justfile/dev documentation for launching or testing the local MCP server.
+4. Add Justfile/dev documentation and a local client smoke test for the loopback URL/token workflow.
 5. Keep existing app behavior unchanged when the server is disabled, not launched, or when playback commands are denied.
 
-Rollback is straightforward: remove the sidecar entrypoint, MCP service/providers, playback bridge, status UI wiring, and dependency/Justfile additions. The Quran, tafsir, search, and audio repository contracts remain valid without MCP.
+Rollback is straightforward: remove the in-app HTTP adapter, MCP service/providers, playback bridge, status UI wiring, and dependency/Justfile additions. The Quran, tafsir, search, and audio repository contracts remain valid without MCP.
 
 ## Open Questions
 
-- Which Dart MCP dependency, if any, should be used after checking the current ecosystem during implementation?
-- Should packaged Windows builds auto-start the local MCP bridge, or should MVP require users to configure their MCP client to launch the server command explicitly?
+- Should packaged Windows builds auto-start the local server? Recommended for MVP: no, require the user to press Start in MCP Status so token visibility and consent are explicit.
 - What timeout should apply to pending playback approval? Recommended for MVP: short enough to avoid hanging clients, long enough for a user to review the prompt, with an explicit timeout error.
 - Should `get_surah` return every ayah by default, or require a caller-provided include flag? Recommended for MVP: return the full surah because IDEA.md names `get_surah` as a read-only data tool and surahs are bounded.

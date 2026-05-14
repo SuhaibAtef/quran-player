@@ -6,6 +6,7 @@ import '../../../app/state/app_bootstrap_status_provider.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/result.dart';
 import '../../../data/audio/providers.dart';
+import '../../../data/mcp/mcp_http_server.dart';
 import '../../../data/mcp/mcp_server_service.dart';
 import '../../../data/quran/providers.dart';
 import '../../../domain/mcp/mcp_lifecycle.dart';
@@ -50,7 +51,7 @@ class McpStatusState {
 
 final mcpStatusControllerProvider =
     StateNotifierProvider<McpStatusController, McpStatusState>((ref) {
-      return McpStatusController();
+      return McpStatusController(ref, const McpHttpServerFactory());
     });
 
 final mcpPlaybackBridgeProvider = Provider<McpPlaybackBridge>((ref) {
@@ -81,23 +82,58 @@ final mcpServerServiceProvider = Provider<McpServerService>((ref) {
 });
 
 class McpStatusController extends StateNotifier<McpStatusState> {
-  McpStatusController() : super(const McpStatusState.initial());
+  McpStatusController(this._ref, this._serverFactory)
+    : super(const McpStatusState.initial());
+
+  final Ref _ref;
+  final McpHttpServerFactory _serverFactory;
+  McpHttpServerHandle? _serverHandle;
 
   Future<void> start() async {
+    if (_serverHandle != null ||
+        state.server.lifecycle == McpServerLifecycle.starting) {
+      return;
+    }
     state = state.copyWith(
       server: state.server.copyWith(
         lifecycle: McpServerLifecycle.starting,
         clearMessage: true,
+        clearConnection: true,
       ),
     );
-    state = state.copyWith(
-      server: state.server.copyWith(lifecycle: McpServerLifecycle.running),
-    );
+
+    try {
+      final service = _ref.read(mcpServerServiceProvider);
+      final handle = await _serverFactory.start(service);
+      _serverHandle = handle;
+      state = state.copyWith(
+        server: state.server.copyWith(
+          lifecycle: McpServerLifecycle.running,
+          uri: handle.uri,
+          authToken: handle.authToken,
+        ),
+      );
+    } on Object catch (e) {
+      state = state.copyWith(
+        server: state.server.copyWith(
+          lifecycle: McpServerLifecycle.failed,
+          message: 'Failed to start MCP server: $e',
+          clearConnection: true,
+        ),
+      );
+    }
   }
 
-  void stop() {
+  Future<void> stop() async {
+    final handle = _serverHandle;
+    _serverHandle = null;
+    await handle?.stop();
     state = state.copyWith(
-      server: state.server.copyWith(lifecycle: McpServerLifecycle.stopped),
+      server: state.server.copyWith(
+        lifecycle: McpServerLifecycle.stopped,
+        clearMessage: true,
+        clearConnection: true,
+      ),
     );
   }
 
@@ -106,8 +142,16 @@ class McpStatusController extends StateNotifier<McpStatusState> {
       server: state.server.copyWith(
         lifecycle: McpServerLifecycle.failed,
         message: message,
+        clearConnection: true,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _serverHandle?.stop();
+    _serverHandle = null;
+    super.dispose();
   }
 
   Future<Result<void>> request(McpPlaybackCommand command) {

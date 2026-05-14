@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:quran_player/data/mcp/mcp_http_server.dart';
+import 'package:quran_player/domain/mcp/mcp_lifecycle.dart';
 import 'package:quran_player/domain/mcp/mcp_playback_command.dart';
 import 'package:quran_player/domain/quran/ayah_key.dart';
 import 'package:quran_player/features/mcp_status/mcp_status_page.dart';
@@ -23,13 +25,39 @@ void main() {
       expect(find.byKey(McpStatusPageKeys.lifecycle), findsOneWidget);
       expect(find.textContaining('State: disabled'), findsOneWidget);
       expect(
-        find.textContaining('Local-only stdio MCP transport'),
+        find.textContaining('Local-only Streamable HTTP MCP transport'),
         findsOneWidget,
       );
+      expect(find.byKey(McpStatusPageKeys.uri), findsNothing);
+      expect(find.byKey(McpStatusPageKeys.token), findsNothing);
       expect(find.textContaining('search_quran'), findsOneWidget);
       expect(find.textContaining('quran://metadata'), findsOneWidget);
     },
   );
+
+  testWidgets('MCP Status shows the running local URL and token', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mcpStatusControllerProvider.overrideWith(
+            _RunningMcpStatusController.new,
+          ),
+        ],
+        child: const Directionality(
+          textDirection: TextDirection.ltr,
+          child: McpStatusPage(),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('State: running'), findsOneWidget);
+    expect(find.byKey(McpStatusPageKeys.uri), findsOneWidget);
+    expect(find.byKey(McpStatusPageKeys.token), findsOneWidget);
+    expect(find.text('URL'), findsOneWidget);
+    expect(find.text('Token'), findsOneWidget);
+  });
 
   testWidgets('MCP Status approves and denies pending playback commands', (
     tester,
@@ -78,4 +106,17 @@ void main() {
     expect((await denial).isErr, isTrue);
     expect(find.textContaining('denied'), findsOneWidget);
   });
+}
+
+class _RunningMcpStatusController extends McpStatusController {
+  _RunningMcpStatusController(Ref ref)
+    : super(ref, const McpHttpServerFactory()) {
+    state = state.copyWith(
+      server: state.server.copyWith(
+        lifecycle: McpServerLifecycle.running,
+        uri: Uri.parse('http://127.0.0.1:12345/mcp'),
+        authToken: 'test-token',
+      ),
+    );
+  }
 }

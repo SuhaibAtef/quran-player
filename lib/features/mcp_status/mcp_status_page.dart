@@ -14,6 +14,8 @@ class McpStatusPageKeys {
   static const body = Key('mcp_status.body');
   static const lifecycle = Key('mcp_status.lifecycle');
   static const localOnly = Key('mcp_status.local_only');
+  static const uri = Key('mcp_status.uri');
+  static const token = Key('mcp_status.token');
   static const tools = Key('mcp_status.tools');
   static const resources = Key('mcp_status.resources');
   static const pending = Key('mcp_status.pending');
@@ -30,6 +32,8 @@ class McpStatusPage extends ConsumerWidget {
     final state = ref.watch(mcpStatusControllerProvider);
     final controller = ref.read(mcpStatusControllerProvider.notifier);
     final small = context.theme.typography.sm;
+    final starting = state.server.lifecycle == McpServerLifecycle.starting;
+    final running = state.server.lifecycle == McpServerLifecycle.running;
 
     return FScaffold(
       header: const FHeader(
@@ -47,18 +51,19 @@ class McpStatusPage extends ConsumerWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  FButton(
-                    onPress: controller.start,
-                    prefix: const Icon(FIcons.play),
-                    child: const Text('Start'),
-                  ),
-                  const SizedBox(width: 8),
-                  FButton(
-                    variant: FButtonVariant.outline,
-                    onPress: controller.stop,
-                    prefix: const Icon(FIcons.square),
-                    child: const Text('Stop'),
-                  ),
+                  if (!running)
+                    FButton(
+                      onPress: starting ? null : controller.start,
+                      prefix: const Icon(FIcons.play),
+                      child: const Text('Start MCP Server'),
+                    )
+                  else
+                    FButton(
+                      variant: FButtonVariant.outline,
+                      onPress: controller.stop,
+                      prefix: const Icon(FIcons.square),
+                      child: const Text('Stop MCP Server'),
+                    ),
                 ],
               ),
             ],
@@ -66,12 +71,27 @@ class McpStatusPage extends ConsumerWidget {
           _Section(
             key: McpStatusPageKeys.localOnly,
             title: 'Transport',
-            children: const [
-              Text('Local-only stdio MCP transport'),
+            children: [
+              const Text('Local-only Streamable HTTP MCP transport'),
               SizedBox(height: 2),
-              Text(
-                'Remote access, filesystem tools, and shell commands are not exposed.',
+              const Text(
+                'Remote access, filesystem tools, and shell commands are not exposed. Use the URL and bearer token with a local MCP client while this app is running.',
               ),
+              if (state.server.uri != null &&
+                  state.server.authToken != null) ...[
+                const SizedBox(height: 8),
+                _ConnectionValueField(
+                  key: McpStatusPageKeys.uri,
+                  label: 'URL',
+                  value: '${state.server.uri}',
+                ),
+                const SizedBox(height: 2),
+                _ConnectionValueField(
+                  key: McpStatusPageKeys.token,
+                  label: 'Token',
+                  value: state.server.authToken!,
+                ),
+              ],
             ],
           ),
           _Section(
@@ -92,6 +112,29 @@ class McpStatusPage extends ConsumerWidget {
           _RecentDecisionsSection(records: state.permissions.recent),
         ],
       ),
+    );
+  }
+}
+
+class _ConnectionValueField extends StatelessWidget {
+  const _ConnectionValueField({
+    super.key,
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return FTextField(
+      control: FTextFieldControl.managed(
+        initial: TextEditingValue(text: value),
+      ),
+      label: Text(label),
+      readOnly: true,
+      maxLines: 2,
     );
   }
 }

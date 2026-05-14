@@ -1,6 +1,6 @@
 ## 1. Protocol and Lifecycle
 
-- [x] 1.1 Evaluate the current Dart MCP package ecosystem and choose either an isolated dependency adapter or a minimal in-repo stdio JSON-RPC transport.
+- [x] 1.1 Evaluate the current Dart MCP package ecosystem and choose an isolated `mcp_server` Streamable HTTP adapter.
 - [x] 1.2 Add MCP server module structure for protocol routing, DTOs, validation, errors, lifecycle state, and tests.
 - [x] 1.3 Implement local-only server startup/shutdown with states `disabled`, `starting`, `running`, `stopped`, and `failed`.
 - [x] 1.4 Add import/security boundary tests proving MCP code exposes no arbitrary file, shell, or remote network listener capability.
@@ -40,3 +40,12 @@
 - [x] 6.1 Run focused MCP data, playback bridge, and MCP Status widget tests.
 - [x] 6.2 Run `just check`.
 - [ ] 6.3 Manually exercise the app MCP Status flow on Windows when possible, including approving and denying a playback command. _(Not run in this non-interactive session; covered by widget tests until a human can exercise the desktop window.)_
+
+## 7. In-app Local Client Usability
+
+- [x] 7.1 Replace the internal-only/local JSON-RPC handler path with an `mcp_server` Streamable HTTP adapter bound to loopback.
+- [x] 7.2 Generate a fresh bearer token on each server start and require it through the MCP package transport.
+- [x] 7.3 Update MCP Status start/stop controls to start the real in-app server and show URL/token only while running.
+- [x] 7.4 Add an HTTP client smoke test proving unauthorized requests fail and authorized local MCP requests can list/call tools.
+- [x] 7.5 Update README.md and AGENTS.md with local LLM/MCP client configuration instructions.
+- [x] 7.6 Run focused MCP HTTP tests and `just check`.

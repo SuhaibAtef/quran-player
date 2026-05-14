@@ -2,7 +2,7 @@
 
 ### Requirement: MCP Status shows server and permission state
 
-The MCP Status top-level destination SHALL show the local MCP server lifecycle state, local-only transport mode, exposed read-only and playback capabilities, pending playback permission requests, and recent in-session command decisions.
+The MCP Status top-level destination SHALL show the local MCP server lifecycle state, start/stop controls, local-only authenticated transport details, exposed read-only and playback capabilities, pending playback permission requests, and recent in-session command decisions.
 
 #### Scenario: Status page shows local server state
 
@@ -13,6 +13,16 @@ The MCP Status top-level destination SHALL show the local MCP server lifecycle s
 
 - **WHEN** the MCP Status page renders
 - **THEN** it indicates that the MCP server is local-only and does not advertise remote access
+
+#### Scenario: User starts the local MCP server
+
+- **WHEN** the user presses Start MCP Server
+- **THEN** MCP Status starts the in-app loopback server and shows the MCP URL plus bearer token
+
+#### Scenario: User stops the local MCP server
+
+- **WHEN** the user presses Stop while the MCP server is running
+- **THEN** the loopback server stops accepting local MCP requests and MCP Status no longer shows an active token
 
 #### Scenario: Status page lists exposed capabilities
 

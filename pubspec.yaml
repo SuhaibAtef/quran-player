@@ -70,6 +70,9 @@ dependencies:
   media_kit: ^1.2.6
   media_kit_libs_audio: ^1.0.7
 
+  # Local MCP Streamable HTTP server with bearer-token auth.
+  mcp_server: ^2.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
