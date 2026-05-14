@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
-import '../../app/state/quran_integrity_provider.dart';
+import '../../app/state/app_bootstrap_status_provider.dart';
 
 class DataIntegrityScreenKeys {
   const DataIntegrityScreenKeys._();
@@ -10,6 +10,7 @@ class DataIntegrityScreenKeys {
   static const root = Key('data_integrity.root');
   static const title = Key('data_integrity.title');
   static const detail = Key('data_integrity.detail');
+  static const dataset = Key('data_integrity.dataset');
 }
 
 class DataIntegrityScreen extends ConsumerWidget {
@@ -17,14 +18,15 @@ class DataIntegrityScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(quranIntegrityProvider);
+    final status = ref.watch(appBootstrapStatusProvider);
+    final dataset = status.failingDataset ?? 'Quran';
     final detail = status.failure?.message ?? 'unknown';
 
     return FScaffold(
       key: DataIntegrityScreenKeys.root,
-      header: const FHeader(
+      header: FHeader(
         title: Text(
-          "Quran data couldn't be verified",
+          "$dataset data couldn't be verified",
           key: DataIntegrityScreenKeys.title,
         ),
       ),
@@ -33,10 +35,11 @@ class DataIntegrityScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "The bundled Quran database failed an integrity check at "
-              "startup. To preserve trust in the text, the app refuses to "
-              "serve any Quran data until the issue is resolved.",
+            Text(
+              'The bundled $dataset database failed an integrity check at '
+              'startup. To preserve trust in the text, the app refuses to '
+              'serve any data until the issue is resolved.',
+              key: DataIntegrityScreenKeys.dataset,
             ),
             const SizedBox(height: 16),
             Text('Detail:', style: context.theme.typography.sm),
@@ -47,9 +50,9 @@ class DataIntegrityScreen extends ConsumerWidget {
               style: context.theme.typography.sm,
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Try reinstalling the app, or run `just build-quran-db` if you '
-              'are working from source.',
+            Text(
+              'Try reinstalling the app, or run `just build-${dataset.toLowerCase()}-db` '
+              'if you are working from source.',
             ),
           ],
         ),

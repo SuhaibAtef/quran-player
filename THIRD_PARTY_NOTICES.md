@@ -33,6 +33,39 @@ own LICENSE file.
   the integrity of the bundled SQLite asset on every launch and refuses to
   render Quran data on mismatch.
 
+## Tafsir — al-Muyassar (King Fahd Complex)
+
+- **Edition:** al-Tafsir al-Muyassar, prepared under the supervision of the
+  King Fahd Complex for the Printing of the Holy Quran (Madinah-mushaf
+  margin edition).
+- **Upstream publisher:** [King Fahd Complex for the Printing of the Holy
+  Quran](https://qurancomplex.gov.sa/).
+- **Distribution path used:** the verbatim Arabic tafsir text is fetched at
+  maintainer build time from the
+  [`spa5k/tafsir_api`](https://github.com/spa5k/tafsir_api) MIT-licensed
+  community mirror, slug `ar-tafsir-muyassar`, pinned to a specific commit
+  SHA recorded in [`tool/build_tafsir_db.dart`](tool/build_tafsir_db.dart).
+  The retrieval timestamp, commit SHA, and SHA-256 of the canonical text
+  payload are recorded in [`assets/tafsir/manifest.json`](assets/tafsir/manifest.json)
+  and inside the bundled SQLite asset (`meta` table).
+- **License:** the tafsir text is the work of the King Fahd Complex; the
+  Complex permits free non-commercial redistribution with proper attribution
+  and without modification. The redistribution layer (`spa5k/tafsir_api`)
+  is independently MIT-licensed.
+
+  Quran Companion bundles the tafsir text **verbatim**. The maintainer build
+  tool verifies the parsed entry count (6,236, matching the Quran corpus) and
+  cross-checks every `(surah, ayah)` key against the bundled Quran DB before
+  emitting output. The runtime app verifies the integrity of the bundled
+  tafsir asset on every launch (schema version, row count, orphan-key
+  cross-check against the Quran DB, and SHA-256) and refuses to serve tafsir
+  data on mismatch.
+
+- **Source policy:** the tafsir corpus is read-only and does not participate
+  in keyword search results in this change. Future changes adding tafsir UI
+  or tafsir-augmented search must continue to credit both the King Fahd
+  Complex (original author) and the `spa5k/tafsir_api` mirror (redistributor).
+
 ## Mushaf rendering — qcf_quran_plus + QCF glyph fonts
 
 - **Package:** [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus)

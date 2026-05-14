@@ -16,7 +16,7 @@ import '../../features/reader/reader_screen.dart';
 import '../../features/search/search_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/surah_detail/surah_detail_page.dart';
-import '../state/quran_integrity_provider.dart';
+import '../state/app_bootstrap_status_provider.dart';
 import '../state/reader_mode.dart';
 import '../state/reader_mode_provider.dart';
 import '../widgets/app_shell.dart';
@@ -30,19 +30,19 @@ GoRouter buildAppRouter(Ref ref) {
     refreshListenable: _IntegrityListenable(ref),
     errorBuilder: (context, state) => const _RouteErrorRedirect(),
     redirect: (context, state) {
-      final status = ref.read(quranIntegrityProvider).state;
+      final status = ref.read(appBootstrapStatusProvider).state;
       final path = state.uri.path;
 
       // Boot phase: while the bootstrap future is pending, send everything
       // (except the bootstrapping page itself) to the bootstrapping screen.
-      if (status == QuranIntegrityState.loading) {
+      if (status == AppBootstrapState.loading) {
         return path == RoutePaths.bootstrapping
             ? null
             : RoutePaths.bootstrapping;
       }
 
       // Fatal phase: integrity failed. Lock the app to the error screen.
-      if (status == QuranIntegrityState.fatal) {
+      if (status == AppBootstrapState.fatal) {
         return path == RoutePaths.dataIntegrityError
             ? null
             : RoutePaths.dataIntegrityError;
@@ -215,7 +215,7 @@ class _RouteErrorRedirect extends StatelessWidget {
 /// status flips (loading → ok or loading → fatal).
 class _IntegrityListenable extends ChangeNotifier {
   _IntegrityListenable(this._ref) {
-    _sub = _ref.listen<QuranIntegrityStatus>(quranIntegrityProvider, (
+    _sub = _ref.listen<AppBootstrapStatus>(appBootstrapStatusProvider, (
       prev,
       next,
     ) {
@@ -224,7 +224,7 @@ class _IntegrityListenable extends ChangeNotifier {
   }
 
   final Ref _ref;
-  late final ProviderSubscription<QuranIntegrityStatus> _sub;
+  late final ProviderSubscription<AppBootstrapStatus> _sub;
 
   @override
   void dispose() {

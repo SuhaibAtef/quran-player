@@ -13,11 +13,13 @@ import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/quran/integrity_checker.dart';
 import 'package:quran_player/data/quran/manifest.dart';
 import 'package:quran_player/data/quran/providers.dart';
+import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/quran_source.dart';
 import 'package:quran_player/features/home/home_page.dart';
 import 'package:quran_player/features/settings/settings_page.dart';
 
 import '_fakes/fake_quran_repository.dart';
+import '_fakes/fake_tafsir_bootstrap.dart';
 
 QuranBootstrap _fakeBootstrap() {
   final repo = FakeQuranRepository();
@@ -59,6 +61,9 @@ Future<void> _pumpApp(WidgetTester tester) async {
         sharedPreferencesProvider.overrideWithValue(prefs),
         quranBootstrapProvider.overrideWith(
           (ref) async => Result.ok(_fakeBootstrap()),
+        ),
+        tafsirBootstrapProvider.overrideWith(
+          (ref) async => Result.ok(fakeTafsirBootstrap()),
         ),
       ],
       child: const App(),

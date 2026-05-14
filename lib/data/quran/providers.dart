@@ -19,11 +19,18 @@ class QuranBootstrap {
     required this.repository,
     required this.manifest,
     required this.report,
+    this.database,
   });
 
   final QuranRepository repository;
   final QuranManifest manifest;
   final IntegrityReport report;
+
+  /// The opened SQLite handle, exposed so the tafsir integrity check can
+  /// cross-reference ayah keys without re-opening the DB. Populated by the
+  /// real `quranBootstrapProvider` in production; may be null in widget-test
+  /// fakes that don't exercise the tafsir bootstrap.
+  final QuranDatabase? database;
 }
 
 /// Initialises the Quran data layer end-to-end. Runs once per launch.
@@ -76,7 +83,12 @@ final quranBootstrapProvider = FutureProvider<Result<QuranBootstrap>>((
     manifest: manifest,
   );
   return Result.ok(
-    QuranBootstrap(repository: repository, manifest: manifest, report: report),
+    QuranBootstrap(
+      repository: repository,
+      database: database,
+      manifest: manifest,
+      report: report,
+    ),
   );
 });
 

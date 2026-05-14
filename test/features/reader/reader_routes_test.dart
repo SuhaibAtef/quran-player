@@ -13,6 +13,7 @@ import 'package:quran_player/data/quran/manifest.dart';
 import 'package:quran_player/data/quran/mushaf_locator_provider.dart';
 import 'package:quran_player/data/quran/mushaf_locator_qcf.dart';
 import 'package:quran_player/data/quran/providers.dart';
+import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/ayah.dart';
 import 'package:quran_player/domain/quran/ayah_key.dart';
 import 'package:quran_player/domain/quran/quran_repository.dart';
@@ -24,6 +25,7 @@ import 'package:quran_player/features/home/home_page.dart';
 import 'package:quran_player/features/reader/reader_screen.dart';
 
 import '../../_fakes/fake_quran_repository.dart';
+import '../../_fakes/fake_tafsir_bootstrap.dart';
 
 QuranBootstrap _bootstrap(QuranRepository repo) {
   final source = QuranSource(
@@ -98,6 +100,9 @@ Future<void> _pump(
         sharedPreferencesProvider.overrideWithValue(prefs),
         quranBootstrapProvider.overrideWith(
           (ref) async => Result.ok(_bootstrap(repo)),
+        ),
+        tafsirBootstrapProvider.overrideWith(
+          (ref) async => Result.ok(fakeTafsirBootstrap()),
         ),
         quranRepositoryProvider.overrideWithValue(repo),
         if (forceLocatorFallback)

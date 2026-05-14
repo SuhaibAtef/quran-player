@@ -10,6 +10,7 @@ import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/quran/integrity_checker.dart';
 import 'package:quran_player/data/quran/manifest.dart';
 import 'package:quran_player/data/quran/providers.dart';
+import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/quran_repository.dart';
 import 'package:quran_player/domain/quran/quran_source.dart';
 import 'package:quran_player/domain/quran/surah.dart';
@@ -17,6 +18,7 @@ import 'package:quran_player/features/home/home_page.dart';
 import 'package:quran_player/features/surahs/state/surahs_provider.dart';
 
 import '../../_fakes/fake_quran_repository.dart';
+import '../../_fakes/fake_tafsir_bootstrap.dart';
 
 QuranBootstrap _bootstrap(QuranRepository repo) {
   final source = QuranSource(
@@ -82,6 +84,9 @@ void main() {
       quranBootstrapProvider.overrideWith(
         (ref) async => Result.ok(_bootstrap(repo)),
       ),
+      tafsirBootstrapProvider.overrideWith(
+        (ref) async => Result.ok(fakeTafsirBootstrap()),
+      ),
       // Override the repository provider directly so the surahs provider sees
       // the fake without going through the real bootstrap.
       quranRepositoryProvider.overrideWithValue(repo),
@@ -113,6 +118,9 @@ void main() {
     await _pump(tester, [
       quranBootstrapProvider.overrideWith(
         (ref) async => Result.ok(_bootstrap(repo)),
+      ),
+      tafsirBootstrapProvider.overrideWith(
+        (ref) async => Result.ok(fakeTafsirBootstrap()),
       ),
       quranRepositoryProvider.overrideWithValue(repo),
       surahsProvider.overrideWith(
