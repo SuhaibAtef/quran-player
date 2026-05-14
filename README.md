@@ -11,6 +11,7 @@ The goal is a Quran player first — clean, respectful, accurate — with MCP as
 - **Search** Arabic ayah text locally.
 - **Bookmark** and resume.
 - **Expose** Quran data over MCP so AI clients can `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, and `list_reciters` without hallucinating references.
+- **Control** playback over MCP only after a visible per-command approval in the app.
 
 ## Target platforms
 
@@ -29,7 +30,7 @@ Accuracy, attribution, privacy, and respectful Quran handling are more important
 
 - Quran text is preserved exactly as sourced — no edits, no AI regeneration, no invented references.
 - Translations and tafsir ship only with clear licensing and attribution.
-- MCP is **disabled or read-only by default**. Playback control via MCP requires user approval.
+- MCP is local-only. Playback control via MCP requires user approval for each command.
 - No remote MCP access in the MVP. No arbitrary file access or shell command execution through MCP, ever.
 - All MCP inputs are validated against strict schemas; secrets never live in the Flutter client.
 
@@ -39,13 +40,13 @@ Accuracy, attribution, privacy, and respectful Quran handling are more important
 Flutter Desktop App         Local Quran MCP Server (sidecar)
   - Quran reader UI           - Quran resources (read)
   - Audio player              - Quran tools (search, get_ayah, …)
-  - Search                    - Playback tools (V1, user-gated)
+  - Search                    - Playback tools (user-gated)
   - Bookmarks                 - Permission checks
-  - Settings                  - Audit log
+  - Settings                  - In-session command decisions
   - MCP status screen
 ```
 
-The MCP server is a local sidecar process — not a network service — so AI clients on the same machine can pull Quran data through a controlled surface.
+The MCP surface is local-only and intentionally narrow. Read-only tools/resources use the same verified repositories as the UI. Playback tools route through the running app player and require per-command approval in MCP Status before they can change playback.
 
 ### Code layout
 
@@ -65,7 +66,9 @@ lib/
   features/                    # one folder per top-level area; placeholders today
     home/  surah_detail/  search/  bookmarks/  settings/  mcp_status/
   data/quran/                  # SQLite-backed QuranRepository, manifest parser, integrity checker
+  data/mcp/                    # local MCP protocol/service layer, DTOs, validation, error mapping
   domain/quran/                # framework-free Quran contracts (Surah, Ayah, AyahKey, QuranSource, QuranRepository)
+  domain/mcp/                  # framework-free MCP lifecycle, error, playback-command contracts
 tool/
   build_quran_db.dart          # maintainer-only build tool (see "Building the Quran DB")
 assets/quran/
@@ -83,7 +86,7 @@ Conventions:
 
 ## Status
 
-Foundation, Quran data layer, mushaf reader, audio-player foundation, and basic Quran search are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. Bookmarks and the MCP server each land in subsequent OpenSpec changes against this foundation. Tracking lives in:
+Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer exposes local read-only Quran/reciter tools and user-approved playback commands through a small in-repo JSON-RPC handler and app bridge. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
@@ -102,6 +105,7 @@ Day-to-day commands are wrapped in the [Justfile](Justfile) — run `just` to li
 | `just get` | Install Dart/Flutter dependencies |
 | `just analyze` | Lints and type errors |
 | `just test` | All widget/unit tests |
+| `just mcp-smoke` | MCP service, safety-boundary, playback bridge, and status UI smoke tests |
 | `just run [device]` | Launch on a device (default: `windows`) |
 | `just build <target>` | Release build (`windows`, `macos`, `linux`) |
 | `just check` | format + analyze + test (pre-commit gate) |
@@ -120,6 +124,24 @@ Quran Companion bundles only verified, attributed text. Full credits live in [TH
 ## Search limitations
 
 MVP search is intentionally basic and trustworthy: it searches only the bundled Arabic Tanzil text through SQLite FTS. It does not search translations, tafsir, transliteration, semantic meaning, fuzzy variants, or saved search history.
+
+## MCP local integration
+
+The MCP implementation is intentionally in-repo and local-only. It does not add a broad MCP package dependency yet; the protocol boundary is a small JSON-RPC handler around explicit tool/resource definitions so the code can avoid remote transports, filesystem tools, shell commands, OAuth, and unrelated server features.
+
+Read-only tools: `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, `list_reciters`.
+
+Read-only resources: `quran://metadata`, `quran://surahs`, `quran://surah/{surah}`, `quran://ayah/{surah}/{ayah}`, `quran://reciters`.
+
+Playback tools: `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, `set_repeat`. Each playback request creates a pending approval in MCP Status; denying or timing out leaves player state unchanged. `set_repeat` currently accepts only `off`, matching the player’s current no-repeat behavior.
+
+MCP client configuration is intentionally not a remote URL. External clients should treat the server as a local stdio-style integration surface and the playback bridge as available only while the Flutter app is running. Until packaging adds a dedicated launcher command, development verification is through the focused smoke tests below.
+
+Development smoke check:
+
+```sh
+just mcp-smoke
+```
 
 ## Building the Quran DB
 
