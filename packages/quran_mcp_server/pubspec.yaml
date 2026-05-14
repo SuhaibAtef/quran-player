@@ -12,7 +12,11 @@ environment:
 
 resolution: workspace
 
-dependencies: {}
+dependencies:
+  # Pure-Dart SQLite (desktop FFI). Used by user_db / audit_log only — Quran
+  # corpus and tafsir reads stay in the host app.
+  sqflite_common_ffi: ^2.3.3
+  path: ^1.9.0
 
 dev_dependencies:
   test: ^1.25.0

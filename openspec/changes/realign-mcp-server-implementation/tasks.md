@@ -17,18 +17,18 @@
 
 ## 3. user.db foundation (D5 / I4)
 
-- [ ] 3.1 Add `packages/quran_mcp_server/lib/src/user_db/user_db_schema.dart` with the v1 schema (`schema_meta`, `audit_log` table, `idx_audit_log_ts`).
-- [ ] 3.2 Add `packages/quran_mcp_server/lib/src/user_db/user_db.dart` with open / migrate / close lifecycle. Open path is provided by the host (passed in constructor) so the package stays Flutter-free.
-- [ ] 3.3 Add `packages/quran_mcp_server/lib/src/audit/audit_entry.dart` (immutable value type) and `audit_log_repository.dart` with `append`, `prune7Days`, `clear`, `recent(int limit)`.
-- [ ] 3.4 Add `packages/quran_mcp_server/lib/src/audit/args_summary.dart` with the 128-codepoint truncate-and-mark helper. (Spec R7)
-- [ ] 3.5 Tests under the workspace package:
+- [x] 3.1 Add `packages/quran_mcp_server/lib/src/user_db/user_db_schema.dart` with the v1 schema (`schema_meta`, `audit_log` table, `idx_audit_log_ts`).
+- [x] 3.2 Add `packages/quran_mcp_server/lib/src/user_db/user_db.dart` with open / migrate / close lifecycle. Open path is provided by the host (passed in constructor) so the package stays Flutter-free.
+- [x] 3.3 Add `packages/quran_mcp_server/lib/src/audit/audit_entry.dart` (immutable value type) and `audit_log_repository.dart` with `append`, `prune7Days`, `clear`, `recent(int limit)`.
+- [x] 3.4 Add `packages/quran_mcp_server/lib/src/audit/args_summary.dart` with the 128-codepoint truncate-and-mark helper. (Spec R7)
+- [x] 3.5 Tests under the workspace package:
       - `test/audit/args_summary_test.dart` (spec R7 scenarios)
       - `test/audit/audit_log_repository_test.dart` (spec R6 scenarios)
       - `test/audit/prune_test.dart` (spec R4 scenarios)
-- [ ] 3.6 Host-app wiring: open `user.db` in `main()` after the Quran/tafsir integrity gates pass, using `path_provider.getApplicationSupportDirectory()/quran/user.db`. Create the directory with `Directory.create(recursive: true)` if missing.
-- [ ] 3.7 Add Riverpod `userDbHealthProvider` and `auditLogRepositoryProvider` in `lib/app/state/`.
-- [ ] 3.8 Wire the prune-on-start hook to fire once after `user.db` opens (calls `AuditLogRepository.prune7Days()`); log the deletion count via `appLogger.info`.
-- [ ] 3.9 Add `test/data/user_db/user_db_graceful_degrade_test.dart` covering the three R5 scenarios: open failure does not block app start, Settings shows non-fatal notice, Quran reads + audio playback continue.
+- [x] 3.6 Host-app wiring: open `user.db` in `main()` after the Quran/tafsir integrity gates pass, using `path_provider.getApplicationSupportDirectory()/quran/user.db`. Create the directory with `Directory.create(recursive: true)` if missing. *Implemented as a fire-and-forget Riverpod `userDbStateProvider` triggered from `main()` via `UncontrolledProviderScope` so the open path is non-blocking and overridable for tests.*
+- [x] 3.7 Add Riverpod `userDbHealthProvider` and `auditLogRepositoryProvider` in `lib/app/state/`. *Plus `userDbPathProvider` and `userDbStateProvider` in `lib/app/state/user_db_provider.dart`.*
+- [x] 3.8 Wire the prune-on-start hook to fire once after `user.db` opens (calls `AuditLogRepository.prune7Days()`); log the deletion count via `appLogger.info`.
+- [x] 3.9 Add `test/data/user_db/user_db_graceful_degrade_test.dart` covering the three R5 scenarios: open failure does not block app start, Settings shows non-fatal notice, Quran reads + audio playback continue. *Settings-notice scenario will be deepened in Section 7 when the UI surface lands; the test currently asserts the provider state (`UserDbHealth.failed`) and the `appLogger.severe` log line that the UI binds to.*
 
 ## 4. Transport: HTTPS → HTTP (D1 / 2.A)
 
