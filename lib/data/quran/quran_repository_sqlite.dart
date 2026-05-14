@@ -8,6 +8,7 @@ import '../../domain/quran/quran_repository.dart';
 import '../../domain/quran/quran_source.dart';
 import '../../domain/quran/quran_search_result.dart';
 import '../../domain/quran/surah.dart';
+import 'arabic_normalization.dart';
 import 'manifest.dart';
 import 'quran_database.dart';
 
@@ -94,7 +95,7 @@ class QuranRepositorySqlite implements QuranRepository {
     if (normalized.isEmpty) {
       return const Result.err(InvalidInputFailure('search query is empty'));
     }
-    final normalizedArabic = _normalizeArabicForSearch(normalized);
+    final normalizedArabic = normalizeArabicForSearch(normalized);
     if (normalizedArabic.isEmpty) {
       return const Result.err(InvalidInputFailure('search query is empty'));
     }
@@ -124,7 +125,7 @@ class QuranRepositorySqlite implements QuranRepository {
       final results = <QuranSearchResult>[];
       for (final row in rows) {
         final text = row['text'] as String;
-        if (!_normalizeArabicForSearch(text).contains(normalizedArabic)) {
+        if (!normalizeArabicForSearch(text).contains(normalizedArabic)) {
           continue;
         }
         results.add(_rowToSearchResult(row));
@@ -183,19 +184,6 @@ QuranSearchResult _rowToSearchResult(Map<String, Object?> row) {
 
 String _normalizeSearchQuery(String query) {
   return query.trim().replaceAll(RegExp(r'\s+'), ' ');
-}
-
-String _normalizeArabicForSearch(String input) {
-  final withoutMarks = input
-      .replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '')
-      .replaceAll(RegExp('[أإآٱ]'), 'ا')
-      .replaceAll('ى', 'ي')
-      .replaceAll('ـ', ' ');
-  final lettersOnly = withoutMarks.replaceAll(
-    RegExp(r'[^\u0621-\u064A\u0660-\u0669\u06F0-\u06F9 ]'),
-    ' ',
-  );
-  return lettersOnly.trim().replaceAll(RegExp(r'\s+'), ' ');
 }
 
 String _quoteFtsTerm(String term) => '"${term.replaceAll('"', '""')}"';
