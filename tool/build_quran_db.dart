@@ -40,7 +40,10 @@ const _sourceUpstream = 'https://tanzil.net/download/';
 const _sourceDistribution =
     'Distributed via Islamic Network alquran.cloud API.';
 
-const _schemaVersion = 1;
+// Schema v2: `ayah_fts` changed from external-content FTS to a manually
+// populated normalized FTS table. Keep this in sync with runtime/tests that
+// validate bundled DB compatibility.
+const _schemaVersion = 2;
 const _expectedSurahCount = 114;
 const _expectedAyahCount = 6236;
 
