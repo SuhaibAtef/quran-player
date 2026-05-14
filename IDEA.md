@@ -143,11 +143,11 @@ The MCP layer should never modify Quran text, invent references, or execute arbi
 
 ## MCP Server Design
 
-For the MVP, the MCP server should be started inside the Flutter app from MCP Status. It should bind only to loopback, show the local Streamable HTTP URL, and require a bearer token generated for the current running session.
+For the MVP, the MCP server should be started inside the Flutter app from MCP Status. It should bind only to loopback, show the local HTTPS Streamable HTTP URL, and require a bearer token generated for the current running session.
 
 ```text
 AI Client
-  ↕ MCP Streamable HTTP + bearer token
+  ↕ HTTPS MCP Streamable HTTP + bearer token
 In-app Local Quran MCP Server
   ↕ app bridge
 Flutter Quran Player

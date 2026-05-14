@@ -72,7 +72,7 @@ class McpStatusPage extends ConsumerWidget {
             key: McpStatusPageKeys.localOnly,
             title: 'Transport',
             children: [
-              const Text('Local-only Streamable HTTP MCP transport'),
+              const Text('Local-only HTTPS Streamable HTTP MCP transport'),
               SizedBox(height: 2),
               const Text(
                 'Remote access, filesystem tools, and shell commands are not exposed. Use the URL and bearer token with a local MCP client while this app is running.',

@@ -25,7 +25,7 @@ void main() {
       expect(find.byKey(McpStatusPageKeys.lifecycle), findsOneWidget);
       expect(find.textContaining('State: disabled'), findsOneWidget);
       expect(
-        find.textContaining('Local-only Streamable HTTP MCP transport'),
+        find.textContaining('Local-only HTTPS Streamable HTTP MCP transport'),
         findsOneWidget,
       );
       expect(find.byKey(McpStatusPageKeys.uri), findsNothing);
@@ -114,7 +114,7 @@ class _RunningMcpStatusController extends McpStatusController {
     state = state.copyWith(
       server: state.server.copyWith(
         lifecycle: McpServerLifecycle.running,
-        uri: Uri.parse('http://127.0.0.1:12345/mcp'),
+        uri: Uri.parse('https://localhost:12345/mcp'),
         authToken: 'test-token',
       ),
     );

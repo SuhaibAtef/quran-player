@@ -18,7 +18,7 @@ Stakeholders: users who want AI clients to query local verified Quran data and d
 **Goals:**
 
 - Ship an in-app local-only MCP server for the five read-only tools, five resources, and six playback tools named in IDEA.md.
-- Let the user start/stop the server from MCP Status and copy a localhost URL plus bearer token into local LLM/MCP clients.
+- Let the user start/stop the server from MCP Status and copy an HTTPS localhost URL plus bearer token into local LLM/MCP clients.
 - Reuse existing verified domain repositories and player controller seams instead of adding parallel data or playback paths.
 - Validate tool/resource inputs strictly and map all expected failures to structured MCP errors.
 - Require explicit user approval before `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, or `set_repeat` can change player state.
@@ -37,11 +37,11 @@ Stakeholders: users who want AI clients to query local verified Quran data and d
 
 ## Decisions
 
-### Use authenticated local Streamable HTTP from inside the app
+### Use authenticated local HTTPS Streamable HTTP from inside the app
 
-The MCP server will start inside the Flutter app from MCP Status using the `mcp_server` Dart package's Streamable HTTP transport. It will bind only to loopback (`127.0.0.1`) and require a generated bearer token. MCP Status will show the URL and token while running. No part of this change will bind a remote TCP, UDP, WebSocket, or public named-pipe listener.
+The MCP server will start inside the Flutter app from MCP Status using the `mcp_server` Dart package's Streamable HTTP transport for protocol handling and bearer-token auth. The package transport is bound to loopback only, and the user-visible endpoint is an HTTPS loopback proxy at `https://localhost:<port>/mcp` using an ephemeral self-signed localhost certificate. MCP Status will show the HTTPS URL and token while running. No part of this change will bind a remote TCP, UDP, WebSocket, or public named-pipe listener.
 
-Why: the user needs to use the server from local LLM/MCP clients, and playback control belongs in the running app because `media_kit` player state lives there. Loopback Streamable HTTP with a bearer token is usable by local clients while preserving IDEA.md's no-remote-access rule.
+Why: the user needs to use the server from local LLM/MCP clients, and playback control belongs in the running app because `media_kit` player state lives there. Loopback HTTPS Streamable HTTP with a bearer token is usable by local clients while preserving IDEA.md's no-remote-access rule. Because public certificate authorities do not issue trusted certificates for this ephemeral local server, clients must trust or explicitly allow the app's self-signed localhost certificate.
 
 Alternative considered: stdio sidecar only. That works for some MCP clients but cannot bridge playback approvals into the running Flutter app without a second IPC layer, and it leaves the MCP Status page unable to show a usable client URL/token.
 
@@ -93,6 +93,7 @@ Alternative considered: leave MCP Status as a simple enabled/disabled display. T
 - Approval prompts can deadlock MCP clients -> Define a bounded pending state and return a timeout/denied error if the user does not approve in time.
 - Local ports can collide -> Bind to loopback on a preferred port with fallback/random local ports and display the actual URL in MCP Status.
 - Token exposure in UI is sensitive -> Generate a fresh high-entropy token per server start and show it only while running.
+- Self-signed HTTPS may be rejected by strict clients -> document that local clients must trust or allow the ephemeral localhost certificate.
 - Large `get_surah` responses may be heavy -> Return full surahs because they are bounded, but do not stream generated summaries.
 - Search queries can contain FTS syntax or hostile input -> Continue relying on `QuranRepository.searchAyahs` normalization/escaping and add MCP-level schema bounds before calling it.
 - Status page could imply the server is remotely discoverable -> Copy and labels must say local-only mode and must not mention remote access.
@@ -102,7 +103,7 @@ Alternative considered: leave MCP Status as a simple enabled/disabled display. T
 1. Add the MCP data service, DTOs, validation, and authenticated local `mcp_server` adapter behind tests.
 2. Add the playback bridge, permission state model, and player command handlers behind tests.
 3. Replace the MCP Status placeholder with lifecycle, capability, and approval UI.
-4. Add Justfile/dev documentation and a local client smoke test for the loopback URL/token workflow.
+4. Add Justfile/dev documentation and a local client smoke test for the HTTPS loopback URL/token workflow.
 5. Keep existing app behavior unchanged when the server is disabled, not launched, or when playback commands are denied.
 
 Rollback is straightforward: remove the in-app HTTP adapter, MCP service/providers, playback bridge, status UI wiring, and dependency/Justfile additions. The Quran, tafsir, search, and audio repository contracts remain valid without MCP.

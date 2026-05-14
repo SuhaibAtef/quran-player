@@ -5,7 +5,7 @@ The app now has verified Quran data, basic search, default reciter metadata, and
 ## What Changes
 
 - Add an in-app local-only MCP server for Quran data access and playback control.
-- Add MCP Status controls to start/stop the server and display the local Streamable HTTP URL plus a bearer token for local LLM/MCP clients.
+- Add MCP Status controls to start/stop the server and display the local HTTPS Streamable HTTP URL plus a bearer token for local LLM/MCP clients.
 - Expose the MVP tools `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, and `list_reciters`.
 - Expose playback tools `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, and `set_repeat`.
 - Expose the MVP resources `quran://metadata`, `quran://surahs`, `quran://surah/{surah}`, `quran://ayah/{surah}/{ayah}`, and `quran://reciters`.
@@ -28,8 +28,8 @@ The app now has verified Quran data, basic search, default reciter metadata, and
 
 ## Impact
 
-- New server-side Dart code using the `mcp_server` Dart package for authenticated local Streamable HTTP MCP transport, tool/resource registration, and JSON DTO mapping.
+- New server-side Dart code using the `mcp_server` Dart package for authenticated local Streamable HTTP MCP transport, a loopback HTTPS proxy, tool/resource registration, and JSON DTO mapping.
 - New app/domain contracts for MCP server lifecycle, permission prompts, and playback command status that can be consumed by the existing MCP Status route.
 - Reuse of `lib/domain/quran/`, `lib/data/quran/`, `lib/domain/audio/`, and `lib/features/player/` controller seams without changing canonical Quran text or audio source policy.
-- New `mcp_server` dependency plus focused HTTP smoke tests for missing-token rejection and authorized local tool calls.
+- New `mcp_server` and certificate-generation dependencies plus focused HTTPS smoke tests for missing-token rejection and authorized local tool calls.
 - Tests for schema validation, repository-backed tool/resource responses, playback permission gating, failure mapping, lifecycle/status providers, and import/security boundaries.

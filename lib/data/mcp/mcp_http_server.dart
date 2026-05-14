@@ -2,29 +2,35 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:basic_utils/basic_utils.dart';
 import 'package:mcp_server/mcp_server.dart' as mcp;
 
 import '../../domain/mcp/mcp_error.dart' as app_mcp;
 import 'mcp_server_service.dart';
 
 const mcpLocalHost = '127.0.0.1';
+const mcpPublicHost = 'localhost';
 const mcpEndpointPath = '/mcp';
 
 class McpHttpServerHandle {
-  McpHttpServerHandle({
+  McpHttpServerHandle._({
     required this.uri,
     required this.authToken,
     required mcp.Server server,
-  }) : _server = server;
+    required _LoopbackHttpsProxy proxy,
+  }) : _server = server,
+       _proxy = proxy;
 
   final Uri uri;
   final String authToken;
   final mcp.Server _server;
+  final _LoopbackHttpsProxy _proxy;
   bool _stopped = false;
 
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
+    await _proxy.close();
     _server.dispose();
   }
 }
@@ -33,9 +39,12 @@ class McpHttpServerFactory {
   const McpHttpServerFactory();
 
   Future<McpHttpServerHandle> start(McpServerService service) async {
-    final port = await _reserveLoopbackPort();
+    final backendPort = await _reserveLoopbackPort();
+    final proxyPort = await _reserveLoopbackPort();
     final token = generateMcpAuthToken();
-    final uri = Uri.parse('http://$mcpLocalHost:$port$mcpEndpointPath');
+    final publicUri = Uri.parse(
+      'https://$mcpPublicHost:$proxyPort$mcpEndpointPath',
+    );
     final server = mcp.Server(
       name: 'Quran Companion',
       version: '0.1.0',
@@ -47,7 +56,7 @@ class McpHttpServerFactory {
       ),
     );
     server.configureProtectedResource(
-      resource: uri.toString(),
+      resource: publicUri.toString(),
       authorizationServers: const ['urn:quran-companion:local-token'],
       bearerMethodsSupported: const ['header'],
       scopesSupported: const ['quran:read', 'playback:control'],
@@ -57,7 +66,7 @@ class McpHttpServerFactory {
 
     final transportResult =
         await mcp.McpServer.createStreamableHttpTransportAsync(
-          port,
+          backendPort,
           host: mcpLocalHost,
           endpoint: mcpEndpointPath,
           fallbackPorts: const [],
@@ -66,7 +75,22 @@ class McpHttpServerFactory {
         );
     final transport = transportResult.get();
     server.connect(transport);
-    return McpHttpServerHandle(uri: uri, authToken: token, server: server);
+    try {
+      final proxy = await _LoopbackHttpsProxy.start(
+        port: proxyPort,
+        targetPort: backendPort,
+        context: _ephemeralLocalhostSecurityContext(),
+      );
+      return McpHttpServerHandle._(
+        uri: publicUri,
+        authToken: token,
+        server: server,
+        proxy: proxy,
+      );
+    } on Object {
+      server.dispose();
+      rethrow;
+    }
   }
 }
 
@@ -82,6 +106,117 @@ Future<int> _reserveLoopbackPort() async {
   await socket.close();
   return port;
 }
+
+SecurityContext _ephemeralLocalhostSecurityContext() {
+  final keyPair = CryptoUtils.generateRSAKeyPair(keySize: 2048);
+  final privateKey = keyPair.privateKey as RSAPrivateKey;
+  final publicKey = keyPair.publicKey as RSAPublicKey;
+  final sans = [mcpPublicHost];
+  final csr = X509Utils.generateRsaCsrPem(
+    {'CN': mcpPublicHost},
+    privateKey,
+    publicKey,
+    san: sans,
+  );
+  final certificate = X509Utils.generateSelfSignedCertificate(
+    privateKey,
+    csr,
+    1,
+    sans: sans,
+    extKeyUsage: [ExtendedKeyUsage.SERVER_AUTH],
+    cA: false,
+    serialNumber: _positiveSerialNumber(),
+    notBefore: DateTime.now().subtract(const Duration(minutes: 5)),
+  );
+  final privateKeyPem = CryptoUtils.encodeRSAPrivateKeyToPem(privateKey);
+  final context = SecurityContext();
+  context.useCertificateChainBytes(utf8.encode(certificate));
+  context.usePrivateKeyBytes(utf8.encode(privateKeyPem));
+  return context;
+}
+
+String _positiveSerialNumber() {
+  final random = Random.secure();
+  final high = random.nextInt(1 << 31);
+  final low = random.nextInt(1 << 31);
+  return ((BigInt.from(high) << 31) | BigInt.from(low)).toString();
+}
+
+class _LoopbackHttpsProxy {
+  _LoopbackHttpsProxy._(this._server, this._targetPort);
+
+  final HttpServer _server;
+  final int _targetPort;
+  final HttpClient _client = HttpClient();
+
+  static Future<_LoopbackHttpsProxy> start({
+    required int port,
+    required int targetPort,
+    required SecurityContext context,
+  }) async {
+    final server = await HttpServer.bindSecure(
+      InternetAddress.loopbackIPv4,
+      port,
+      context,
+    );
+    final proxy = _LoopbackHttpsProxy._(server, targetPort);
+    server.listen(proxy._handleRequest);
+    return proxy;
+  }
+
+  Future<void> close() async {
+    _client.close(force: true);
+    await _server.close(force: true);
+  }
+
+  Future<void> _handleRequest(HttpRequest request) async {
+    try {
+      final target = Uri(
+        scheme: 'http',
+        host: mcpLocalHost,
+        port: _targetPort,
+        path: request.uri.path,
+        query: request.uri.query,
+      );
+      final upstreamRequest = await _client.openUrl(request.method, target);
+      _copyHeaders(request.headers, upstreamRequest.headers);
+      await for (final chunk in request) {
+        upstreamRequest.add(chunk);
+      }
+      final upstreamResponse = await upstreamRequest.close();
+      request.response.statusCode = upstreamResponse.statusCode;
+      _copyHeaders(upstreamResponse.headers, request.response.headers);
+      await upstreamResponse.pipe(request.response);
+    } on Object catch (e) {
+      request.response.statusCode = HttpStatus.badGateway;
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode({'error': 'MCP HTTPS proxy failed: $e'}),
+      );
+      await request.response.close();
+    }
+  }
+}
+
+void _copyHeaders(HttpHeaders from, HttpHeaders to) {
+  from.forEach((name, values) {
+    if (_hopByHopHeaders.contains(name.toLowerCase())) return;
+    to.set(name, values);
+  });
+}
+
+const _hopByHopHeaders = {
+  'connection',
+  'content-length',
+  'host',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+};
 
 void _registerTools(mcp.Server server, McpServerService service) {
   for (final tool in service.listTools()) {

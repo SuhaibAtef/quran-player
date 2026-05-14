@@ -9,15 +9,20 @@ The system SHALL provide an in-app local MCP server for approved local clients a
 - **WHEN** the MCP server is started from the app
 - **THEN** it binds only to a loopback address and does not bind a public TCP, UDP, WebSocket, or remote-access listener
 
-#### Scenario: Server exposes authenticated local client details
+#### Scenario: Server exposes authenticated HTTPS local client details
 
 - **WHEN** the MCP server is running
-- **THEN** the app exposes a localhost MCP URL and bearer token that local LLM/MCP clients can use
+- **THEN** the app exposes an `https://localhost` MCP URL and bearer token that local LLM/MCP clients can use
 
 #### Scenario: Missing token is rejected
 
-- **WHEN** a local client calls the MCP endpoint without the displayed bearer token
+- **WHEN** a local client calls the HTTPS MCP endpoint without the displayed bearer token
 - **THEN** the server returns an unauthorized response and does not execute a tool or resource handler
+
+#### Scenario: HTTPS endpoint remains local
+
+- **WHEN** the app exposes the HTTPS MCP URL
+- **THEN** TLS terminates only on a loopback listener and forwards only to the loopback MCP package transport
 
 #### Scenario: Server status is reported
 

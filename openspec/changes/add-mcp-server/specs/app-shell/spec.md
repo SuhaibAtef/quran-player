@@ -17,7 +17,7 @@ The MCP Status top-level destination SHALL show the local MCP server lifecycle s
 #### Scenario: User starts the local MCP server
 
 - **WHEN** the user presses Start MCP Server
-- **THEN** MCP Status starts the in-app loopback server and shows the MCP URL plus bearer token
+- **THEN** MCP Status starts the in-app loopback server and shows the HTTPS MCP URL plus bearer token
 
 #### Scenario: User stops the local MCP server
 

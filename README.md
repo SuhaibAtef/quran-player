@@ -86,7 +86,7 @@ Conventions:
 
 ## Status
 
-Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer exposes local read-only Quran/reciter tools and user-approved playback commands through an in-app `mcp_server` Streamable HTTP endpoint started from MCP Status. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
+Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer exposes local read-only Quran/reciter tools and user-approved playback commands through an in-app `mcp_server` Streamable HTTP endpoint behind an HTTPS localhost proxy started from MCP Status. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
@@ -105,7 +105,7 @@ Day-to-day commands are wrapped in the [Justfile](Justfile) — run `just` to li
 | `just get` | Install Dart/Flutter dependencies |
 | `just analyze` | Lints and type errors |
 | `just test` | All widget/unit tests |
-| `just mcp-smoke` | MCP service, safety-boundary, playback bridge, and status UI smoke tests |
+| `just mcp-smoke` | MCP service, HTTPS auth, safety-boundary, playback bridge, and status UI smoke tests |
 | `just run [device]` | Launch on a device (default: `windows`) |
 | `just build <target>` | Release build (`windows`, `macos`, `linux`) |
 | `just check` | format + analyze + test (pre-commit gate) |
@@ -127,7 +127,7 @@ MVP search is intentionally basic and trustworthy: it searches only the bundled 
 
 ## MCP local integration
 
-The MCP implementation is intentionally local-only. Open MCP Status in the app, click **Start MCP Server**, then use the displayed `http://127.0.0.1:<port>/mcp` URL and bearer token with a local MCP client. The server binds only to loopback, generates a fresh token on each start, and stops when the user stops it or the app exits.
+The MCP implementation is intentionally local-only. Open MCP Status in the app, click **Start MCP Server**, then use the displayed `https://localhost:<port>/mcp` URL and bearer token with a local MCP client. The public local endpoint is HTTPS with an ephemeral self-signed localhost certificate, and it proxies to the package-backed MCP transport that still enforces the bearer token. The server binds only to loopback, generates a fresh token on each start, and stops when the user stops it or the app exits. Local clients must trust the app's self-signed localhost certificate or explicitly allow it for this local endpoint.
 
 Read-only tools: `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, `list_reciters`.
 
@@ -139,7 +139,7 @@ Generic local MCP client shape:
 
 ```json
 {
-  "url": "http://127.0.0.1:<port>/mcp",
+  "url": "https://localhost:<port>/mcp",
   "headers": {
     "Authorization": "Bearer <token shown in MCP Status>"
   }

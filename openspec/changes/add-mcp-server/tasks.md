@@ -43,9 +43,9 @@
 
 ## 7. In-app Local Client Usability
 
-- [x] 7.1 Replace the internal-only/local JSON-RPC handler path with an `mcp_server` Streamable HTTP adapter bound to loopback.
+- [x] 7.1 Replace the internal-only/local JSON-RPC handler path with an `mcp_server` Streamable HTTP adapter and HTTPS proxy bound to loopback.
 - [x] 7.2 Generate a fresh bearer token on each server start and require it through the MCP package transport.
 - [x] 7.3 Update MCP Status start/stop controls to start the real in-app server and show URL/token only while running.
-- [x] 7.4 Add an HTTP client smoke test proving unauthorized requests fail and authorized local MCP requests can list/call tools.
+- [x] 7.4 Add an HTTPS client smoke test proving unauthorized requests fail and authorized local MCP requests can list/call tools.
 - [x] 7.5 Update README.md and AGENTS.md with local LLM/MCP client configuration instructions.
 - [x] 7.6 Run focused MCP HTTP tests and `just check`.

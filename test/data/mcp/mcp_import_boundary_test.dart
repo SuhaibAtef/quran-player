@@ -18,7 +18,20 @@ void main() {
         expect(text, isNot(contains('Process.')), reason: file.path);
         expect(text, isNot(contains('File(')), reason: file.path);
         expect(text, isNot(contains('Directory(')), reason: file.path);
-        expect(text, isNot(contains('HttpServer.bind')), reason: file.path);
+        final isHttpServerAdapter = path.endsWith(
+          'lib/data/mcp/mcp_http_server.dart',
+        );
+        if (isHttpServerAdapter) {
+          expect(text, contains("mcpLocalHost = '127.0.0.1'"));
+          expect(text, contains("mcpPublicHost = 'localhost'"));
+          expect(text, contains('InternetAddress.loopbackIPv4'));
+          expect(text, contains('HttpServer.bindSecure'));
+          expect(text, isNot(contains('HttpServer.bind(')), reason: file.path);
+        } else {
+          expect(text, isNot(contains('ServerSocket')), reason: file.path);
+          expect(text, isNot(contains('Socket.bind')), reason: file.path);
+          expect(text, isNot(contains('HttpServer.bind')), reason: file.path);
+        }
         expect(text, isNot(contains('0.0.0.0')), reason: file.path);
         expect(
           text,
@@ -30,14 +43,6 @@ void main() {
           isNot(contains('InternetAddress.anyIPv6')),
           reason: file.path,
         );
-
-        if (path.endsWith('lib/data/mcp/mcp_http_server.dart')) {
-          expect(text, contains("mcpLocalHost = '127.0.0.1'"));
-          expect(text, contains('InternetAddress.loopbackIPv4'));
-        } else {
-          expect(text, isNot(contains('ServerSocket')), reason: file.path);
-          expect(text, isNot(contains('Socket.bind')), reason: file.path);
-        }
       }
     },
   );

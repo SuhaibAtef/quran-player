@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/mcp/mcp_http_server.dart';
 import 'package:quran_player/data/mcp/mcp_server_service.dart';
@@ -16,11 +17,16 @@ import '../../_fakes/fake_audio_repository.dart';
 import '../../_fakes/fake_quran_repository.dart';
 
 void main() {
-  test('rejects Streamable HTTP requests without bearer token', () async {
+  test('rejects HTTPS Streamable HTTP requests without bearer token', () async {
     final handle = await const McpHttpServerFactory().start(_service());
     addTearDown(handle.stop);
+    final client = _selfSignedLocalhostClient();
+    addTearDown(client.close);
 
-    final response = await http.post(
+    expect(handle.uri.scheme, 'https');
+    expect(handle.uri.host, 'localhost');
+
+    final response = await client.post(
       handle.uri,
       headers: const {
         'accept': 'application/json, text/event-stream',
@@ -31,6 +37,12 @@ void main() {
 
     expect(response.statusCode, HttpStatus.unauthorized);
     expect(response.body, contains('Unauthorized'));
+
+    final metadata = await client.get(
+      handle.uri.replace(path: '/.well-known/oauth-protected-resource'),
+    );
+    expect(metadata.statusCode, HttpStatus.ok);
+    expect(metadata.body, contains(handle.uri.toString()));
   });
 
   test(
@@ -38,8 +50,13 @@ void main() {
     () async {
       final handle = await const McpHttpServerFactory().start(_service());
       addTearDown(handle.stop);
+      final client = _selfSignedLocalhostClient();
+      addTearDown(client.close);
 
-      final initialize = await _postJson(handle, {
+      expect(handle.uri.scheme, 'https');
+      expect(handle.uri.host, 'localhost');
+
+      final initialize = await _postJson(client, handle, {
         'jsonrpc': '2.0',
         'id': 1,
         'method': 'initialize',
@@ -59,7 +76,7 @@ void main() {
         containsPair('protocolVersion', '2025-06-18'),
       );
 
-      final tools = await _postJson(handle, {
+      final tools = await _postJson(client, handle, {
         'jsonrpc': '2.0',
         'id': 2,
         'method': 'tools/list',
@@ -69,7 +86,7 @@ void main() {
       expect(tools.body, contains('get_ayah'));
       expect(tools.body, contains('play_surah'));
 
-      final ayah = await _postJson(handle, {
+      final ayah = await _postJson(client, handle, {
         'jsonrpc': '2.0',
         'id': 3,
         'method': 'tools/call',
@@ -90,6 +107,7 @@ void main() {
 }
 
 Future<http.Response> _postJson(
+  http.Client client,
   McpHttpServerHandle handle,
   Map<String, Object?> body, {
   String? sessionId,
@@ -101,7 +119,13 @@ Future<http.Response> _postJson(
   };
   if (sessionId != null) headers['mcp-session-id'] = sessionId;
 
-  return http.post(handle.uri, headers: headers, body: jsonEncode(body));
+  return client.post(handle.uri, headers: headers, body: jsonEncode(body));
+}
+
+http.Client _selfSignedLocalhostClient() {
+  final ioClient = HttpClient()
+    ..badCertificateCallback = (_, host, _) => host == 'localhost';
+  return IOClient(ioClient);
 }
 
 Map<String, dynamic> _json(http.Response response) {
