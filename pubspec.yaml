@@ -79,6 +79,12 @@ dependencies:
   # Generates ephemeral self-signed localhost certificates for the HTTPS MCP proxy.
   basic_utils: ^5.8.2
 
+  # Workspace member: loopback MCP server. Imports only pure Dart contracts;
+  # the host app provides the Quran/audio/auditlog/scope-check adapters at
+  # composition time. See packages/quran_mcp_server/ and AGENTS.md > Lib layout.
+  quran_mcp_server:
+    path: packages/quran_mcp_server
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:quran_player/core/error/failure.dart';
 import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/mcp/mcp_server_service.dart';
-import 'package:quran_player/domain/mcp/mcp_error.dart';
+import 'package:quran_mcp_server/quran_mcp_server.dart';
+
 import 'package:quran_player/domain/mcp/mcp_playback_bridge.dart';
 import 'package:quran_player/domain/mcp/mcp_playback_command.dart';
 import 'package:quran_player/domain/quran/ayah.dart';

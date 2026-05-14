@@ -2,7 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quran_player/data/mcp/mcp_http_server.dart';
-import 'package:quran_player/domain/mcp/mcp_lifecycle.dart';
+import 'package:quran_mcp_server/quran_mcp_server.dart';
+
 import 'package:quran_player/domain/mcp/mcp_playback_command.dart';
 import 'package:quran_player/domain/quran/ayah_key.dart';
 import 'package:quran_player/features/mcp_status/mcp_status_page.dart';

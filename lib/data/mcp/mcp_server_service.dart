@@ -1,11 +1,13 @@
+import 'package:quran_mcp_server/quran_mcp_server.dart';
+
 import '../../core/error/result.dart';
 import '../../domain/audio/audio_repository.dart';
-import '../../domain/mcp/mcp_error.dart';
 import '../../domain/mcp/mcp_playback_bridge.dart';
 import '../../domain/mcp/mcp_playback_command.dart';
 import '../../domain/quran/ayah_key.dart';
 import '../../domain/quran/quran_repository.dart';
 import 'mcp_dtos.dart';
+import 'mcp_error_mapper.dart';
 
 typedef McpDataAvailable = Result<void> Function();
 typedef McpPermissionRequest =
@@ -373,14 +375,14 @@ class McpServerService {
   void _ensureDataAvailable() {
     final available = _dataAvailable();
     if (available is Err<void>) {
-      throw McpException(McpError.fromFailure(available.failure));
+      throw McpException(mcpErrorFromFailure(available.failure));
     }
   }
 
   T _unwrapSync<T>(Result<T> result) {
     return switch (result) {
       Ok(:final value) => value,
-      Err(:final failure) => throw McpException(McpError.fromFailure(failure)),
+      Err(:final failure) => throw McpException(mcpErrorFromFailure(failure)),
     };
   }
 

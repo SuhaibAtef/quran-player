@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
 import '../../data/mcp/mcp_server_service.dart';
-import '../../domain/mcp/mcp_lifecycle.dart';
+import 'package:quran_mcp_server/quran_mcp_server.dart';
+
 import '../../domain/mcp/mcp_playback_command.dart';
 import 'state/mcp_server_controller.dart';
 

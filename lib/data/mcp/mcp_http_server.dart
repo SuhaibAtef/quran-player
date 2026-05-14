@@ -5,7 +5,7 @@ import 'dart:math';
 import 'package:basic_utils/basic_utils.dart';
 import 'package:mcp_server/mcp_server.dart' as mcp;
 
-import '../../domain/mcp/mcp_error.dart' as app_mcp;
+import 'package:quran_mcp_server/quran_mcp_server.dart' as app_mcp;
 import 'mcp_server_service.dart';
 
 const mcpLocalHost = '127.0.0.1';

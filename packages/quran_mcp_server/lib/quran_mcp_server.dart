@@ -4,3 +4,6 @@
 /// server. The package's internals live under `src/` and are not part of the
 /// public contract.
 library;
+
+export 'src/mcp_error.dart';
+export 'src/mcp_lifecycle.dart';

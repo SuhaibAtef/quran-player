@@ -9,11 +9,11 @@
 
 ## 2. Move shared MCP types into the workspace package (D3)
 
-- [ ] 2.1 Move `lib/domain/mcp/mcp_error.dart` → `packages/quran_mcp_server/lib/src/mcp_error.dart`. Update import sites.
-- [ ] 2.2 Move `lib/domain/mcp/mcp_lifecycle.dart` → `packages/quran_mcp_server/lib/src/mcp_lifecycle.dart`. Update import sites.
-- [ ] 2.3 **Delete** `lib/domain/mcp/mcp_playback_command.dart` (per-command approval flow is gone).
-- [ ] 2.4 Decide bridge fate: either simplify `mcp_playback_bridge.dart` into a thin direct `AudioRepository` consumer in `packages/quran_mcp_server/lib/src/audio_bridge.dart`, or remove it entirely if Mode B tools call `AudioRepository` directly. Mention the choice in the commit message.
-- [ ] 2.5 Re-export from `packages/quran_mcp_server/lib/quran_mcp_server.dart` only the host-app-facing API (`QuranMcpServer` class once it exists, plus `Scope` enum from task 7.3 once added).
+- [x] 2.1 Move `lib/domain/mcp/mcp_error.dart` → `packages/quran_mcp_server/lib/src/mcp_error.dart`. Update import sites. (Note: `McpError.fromFailure` extracted to host-side `lib/data/mcp/mcp_error_mapper.dart` because the package can't depend back on `lib/core/error/`. Added new `McpErrorCode.scopeDenied` for Section 7.)
+- [x] 2.2 Move `lib/domain/mcp/mcp_lifecycle.dart` → `packages/quran_mcp_server/lib/src/mcp_lifecycle.dart`. Update import sites.
+- [ ] 2.3 **Delete** `lib/domain/mcp/mcp_playback_command.dart` (per-command approval flow is gone). *Deferred — cascades with Section 7 (mcp_server_controller, mcp_status_page, mcp_playback_bridge); will land in the same commit that removes the Approve/Deny UI.*
+- [ ] 2.4 Decide bridge fate: either simplify `mcp_playback_bridge.dart` into a thin direct `AudioRepository` consumer in `packages/quran_mcp_server/lib/src/audio_bridge.dart`, or remove it entirely if Mode B tools call `AudioRepository` directly. Mention the choice in the commit message. *Deferred — same Section 7 cascade.*
+- [x] 2.5 Re-export from `packages/quran_mcp_server/lib/quran_mcp_server.dart` only the host-app-facing API (`QuranMcpServer` class once it exists, plus `Scope` enum from task 7.3 once added). *Initial export: `McpError`, `McpErrorCode`, `McpException`, `McpServerStatus`, `McpServerLifecycle`. More added as the package grows.*
 
 ## 3. user.db foundation (D5 / I4)
 

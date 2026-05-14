@@ -9,7 +9,8 @@ import '../../../data/audio/providers.dart';
 import '../../../data/mcp/mcp_http_server.dart';
 import '../../../data/mcp/mcp_server_service.dart';
 import '../../../data/quran/providers.dart';
-import '../../../domain/mcp/mcp_lifecycle.dart';
+import 'package:quran_mcp_server/quran_mcp_server.dart';
+
 import '../../../domain/mcp/mcp_playback_bridge.dart';
 import '../../../domain/mcp/mcp_playback_command.dart';
 import '../../player/state/audio_player_controller.dart';
