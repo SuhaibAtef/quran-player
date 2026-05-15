@@ -18,6 +18,10 @@ dependencies:
   sqflite_common_ffi: ^2.3.3
   path: ^1.9.0
 
+  # MCP protocol implementation. Only `lib/src/adapter/mcp_dart_adapter.dart`
+  # is permitted to import this package; spec mcp-server R1 enforces that.
+  mcp_dart: ^2.1.1
+
 dev_dependencies:
   test: ^1.25.0
   flutter_lints: ^6.0.0

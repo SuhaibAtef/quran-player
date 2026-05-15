@@ -39,10 +39,10 @@
 
 ## 5. Package swap: `mcp_server` → `mcp_dart` (D2 / 2.B)
 
-- [ ] 5.1 Remove `mcp_server` from root `pubspec.yaml` dependencies.
-- [ ] 5.2 Add `mcp_dart: ^2.1.1` to `packages/quran_mcp_server/pubspec.yaml`.
-- [ ] 5.3 Implement `packages/quran_mcp_server/lib/src/adapter/mcp_dart_adapter.dart` exposing `McpServerAdapter` (`bind(host, port)`, `registerTool`, `registerResource`, `events`). It is the only file that imports `package:mcp_dart`. (Spec R1 scenario 2)
-- [ ] 5.4 Verify `mcp_dart`'s HTTP transport accepts a `host` parameter or binds loopback by default. If it binds non-loopback, drop incoming connections from non-`127.0.0.1` peers at the dispatch layer; file an upstream issue. (Design Open Question 1)
+- [ ] 5.1 Remove `mcp_server` from root `pubspec.yaml` dependencies. *Deferred to the deletion commit; the new package and the old code coexist briefly so each commit stays compilable.*
+- [x] 5.2 Add `mcp_dart: ^2.1.1` to `packages/quran_mcp_server/pubspec.yaml`.
+- [x] 5.3 Implement `packages/quran_mcp_server/lib/src/adapter/mcp_dart_adapter.dart` exposing `McpServerAdapter` (`bind(host, port)`, `registerTool`, `registerResource`, `events`). It is the only file that imports `package:mcp_dart`. (Spec R1 scenario 2) *The HTTP listener lives in `src/server.dart` (we own `HttpServer.bind` directly so the bearer-token gate runs before mcp_dart sees the request); the adapter wraps mcp_dart's tool registration / dispatch shape. Resource reads currently bypass the adapter and route through `Dispatcher.readResource` because mcp_dart's resource template surface varies between versions — re-evaluate when we have a stable target.*
+- [x] 5.4 Verify `mcp_dart`'s HTTP transport accepts a `host` parameter or binds loopback by default. If it binds non-loopback, drop incoming connections from non-`127.0.0.1` peers at the dispatch layer; file an upstream issue. (Design Open Question 1) *Resolved: we don't use mcp_dart's StreamableHTTPServerTransport at all — the package owns its own `HttpServer.bind(InternetAddress.loopbackIPv4, port)` and validates each request's `connectionInfo.remoteAddress.isLoopback`. This is defence-in-depth on top of the OS-level loopback bind.*
 
 ## 6. Layout: `lib/data/mcp/*` → `packages/quran_mcp_server/lib/src/*` (D3 / 2.C)
 
