@@ -1,5 +1,7 @@
 ## ADDED Requirements
 
+> **Reviewer note:** the scenarios below describe the **shipped** shape of the `mcp-server` capability after the realignment in [`realign-mcp-server-implementation`](../../realign-mcp-server-implementation/). Five originally-proposed scenarios about per-command modal approval are explicitly REMOVED; the corrected scenarios are MODIFIED into the shipped scope-toggle shape. The cross-references to the correction's spec are kept inline so the lineage stays auditable.
+
 ### Requirement: Local-only MCP server lifecycle
 
 The system SHALL provide an in-app local MCP server for approved local clients and SHALL NOT expose any remote network listener, arbitrary file access, or shell command execution capability. The server lifecycle MUST be observable as `disabled`, `starting`, `running`, `stopped`, or `failed`.
@@ -9,20 +11,24 @@ The system SHALL provide an in-app local MCP server for approved local clients a
 - **WHEN** the MCP server is started from the app
 - **THEN** it binds only to a loopback address and does not bind a public TCP, UDP, WebSocket, or remote-access listener
 
-#### Scenario: Server exposes authenticated HTTPS local client details
+#### Scenario: Server exposes plain HTTP local client details
+
+> Originally proposed as `Server exposes authenticated HTTPS local client details`; corrected to plain HTTP per `align-mcp-server-with-explore-decisions` D1.
 
 - **WHEN** the MCP server is running
-- **THEN** the app exposes an `https://localhost` MCP URL and bearer token that local LLM/MCP clients can use
+- **THEN** the app exposes an `http://127.0.0.1:<port>/mcp` MCP URL and a per-server-start bearer token that local LLM/MCP clients can use
 
 #### Scenario: Missing token is rejected
 
-- **WHEN** a local client calls the HTTPS MCP endpoint without the displayed bearer token
-- **THEN** the server returns an unauthorized response and does not execute a tool or resource handler
+- **WHEN** a local client calls the HTTP MCP endpoint without the displayed bearer token in the `Authorization: Bearer <token>` header
+- **THEN** the server returns a `401 Unauthorized` response and does not execute a tool or resource handler
 
-#### Scenario: HTTPS endpoint remains local
+#### Scenario: HTTP endpoint remains local
 
-- **WHEN** the app exposes the HTTPS MCP URL
-- **THEN** TLS terminates only on a loopback listener and forwards only to the loopback MCP package transport
+> Originally `HTTPS endpoint remains local`; TLS terminator removed.
+
+- **WHEN** the app exposes the MCP URL
+- **THEN** the HTTP listener binds only to `127.0.0.1` (never `0.0.0.0`, `::`, or any external interface) and rejects any request whose remote address is not loopback
 
 #### Scenario: Server status is reported
 
@@ -94,7 +100,7 @@ The MCP server SHALL expose resources named `quran://metadata`, `quran://surahs`
 
 ### Requirement: Strict MCP input validation and failure mapping
 
-The MCP server SHALL validate every tool argument and resource URI before calling repositories or playback commands. Validation, repository, permission, and player failures MUST be returned as structured MCP errors without throwing raw exceptions across the protocol boundary.
+The MCP server SHALL validate every tool argument and resource URI before calling repositories or playback commands. Validation, repository, scope, and player failures MUST be returned as structured MCP errors without throwing raw exceptions across the protocol boundary.
 
 #### Scenario: Empty search query is rejected
 
@@ -116,33 +122,33 @@ The MCP server SHALL validate every tool argument and resource URI before callin
 - **WHEN** the app bootstrap status indicates Quran or tafsir integrity failure
 - **THEN** Quran tools and resources return a structured unavailable or data-integrity error instead of serving partial data
 
-### Requirement: Playback control tools require permission
+### Requirement: Playback control tools require playback scope
 
-The MCP server SHALL expose playback tools named `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, and `set_repeat`. Each playback tool MUST require explicit user approval before changing player state.
+The MCP server SHALL expose playback tools named `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, and `set_repeat`. Each playback tool MUST gate on the `mcp.scope.playback` Settings toggle being ON. When the toggle is OFF, the tool returns a structured `scope_denied` MCP error and player state is unchanged. (Originally drafted as `Playback control tools require permission` with per-command modal approval; corrected to pre-granted scope toggle per `align-mcp-server-with-explore-decisions` D4. The four scenarios listed under `## REMOVED Requirements` in that correction's spec are removed from this requirement.)
 
-#### Scenario: Play surah waits for user approval
+#### Scenario: Play surah requires playback scope
 
-- **WHEN** a client calls `play_surah` for surah `36`
-- **THEN** the command enters a pending approval state and no playback starts until the user approves it
+- **WHEN** a client calls `play_surah` for surah `36` AND the `mcp.scope.playback` toggle is OFF
+- **THEN** the server returns a structured `scope_denied` MCP error, no playback starts, and the player state is unchanged
 
-#### Scenario: Play ayah waits for user approval
+#### Scenario: Play ayah requires playback scope
 
-- **WHEN** a client calls `play_ayah` for reference `2:255`
-- **THEN** the command enters a pending approval state and no playback starts until the user approves it
+- **WHEN** a client calls `play_ayah` for reference `2:255` AND the `mcp.scope.playback` toggle is OFF
+- **THEN** the server returns a structured `scope_denied` MCP error and no playback starts
 
-#### Scenario: Pause command waits for user approval
+#### Scenario: Pause command requires playback scope
 
-- **WHEN** a client calls `pause_playback`
-- **THEN** the current playback state is unchanged until the user approves the pause command
+- **WHEN** a client calls `pause_playback` AND the `mcp.scope.playback` toggle is OFF
+- **THEN** the server returns a structured `scope_denied` MCP error and the current playback state is unchanged
 
-#### Scenario: Denied command does not change playback
+#### Scenario: Scope-denied command does not change playback
 
-- **WHEN** the user denies a pending playback command
-- **THEN** the server returns a structured permission-denied error and the player state remains unchanged
+- **WHEN** any Mode B tool returns `scope_denied`
+- **THEN** the audio bridge is never invoked and the player state is unchanged
 
-#### Scenario: Approved command uses app player behavior
+#### Scenario: Authorized-by-scope command uses app player behavior
 
-- **WHEN** the user approves a valid `play_ayah` command
+- **WHEN** a client calls a valid `play_ayah` AND the `mcp.scope.playback` toggle is ON
 - **THEN** the app resolves the ayah through existing audio/player contracts and begins playback using the same behavior as the UI
 
 #### Scenario: App unavailable blocks playback control
@@ -154,12 +160,43 @@ The MCP server SHALL expose playback tools named `play_surah`, `play_ayah`, `pau
 
 The MCP server SHALL validate `set_repeat` arguments against repeat modes supported by the app. Unsupported repeat modes MUST fail with structured invalid-input errors.
 
-#### Scenario: Supported repeat mode can be approved
+#### Scenario: Supported repeat mode is authorized by scope
 
-- **WHEN** a client calls `set_repeat` with a supported repeat mode
-- **THEN** the command enters pending approval and applies only after user approval
+> Originally `Supported repeat mode can be approved`; corrected per D4.
+
+- **WHEN** a client calls `set_repeat` with a supported repeat mode AND the `mcp.scope.playback` toggle is ON
+- **THEN** the command applies without further prompting
 
 #### Scenario: Unsupported repeat mode is rejected
 
 - **WHEN** a client calls `set_repeat` with an unsupported mode
-- **THEN** the server returns a structured invalid-input error and does not prompt for approval
+- **THEN** the server returns a structured invalid-input error and does not change repeat behavior
+
+### Requirement: Persistent audit log
+
+The MCP server SHALL persist every tool call (Mode A and Mode B) to a SQLite `audit_log` table in a user-writable `user.db` at `path_provider.getApplicationSupportDirectory()/quran/user.db`. The log captures `tool_name`, `args_summary`, `result_status` (one of `ok`, `scope_denied`, `invalid_input`, `not_found`, `unavailable`, `error`), `scope_at_time`, and `ts_utc`. (Originally `Persistent audit logs are deferred`; un-deferred per `align-mcp-server-with-explore-decisions` D5.)
+
+#### Scenario: Successful Mode A call is recorded
+
+- **WHEN** a client calls `search_quran` and the handler returns successfully
+- **THEN** an `audit_log` row is appended with `tool_name='search_quran'`, `result_status='ok'`, and the `args_summary` is the truncated query
+
+#### Scenario: Failed Mode A call is recorded
+
+- **WHEN** a client calls `get_ayah` with a malformed reference
+- **THEN** an `audit_log` row is appended with `tool_name='get_ayah'` and `result_status='invalid_input'`
+
+#### Scenario: 7-day prune fires on app start
+
+- **WHEN** the app starts and `user.db` opens successfully
+- **THEN** the prune deletes every `audit_log` row whose `ts_utc` is older than 7 days
+
+#### Scenario: Clear button wipes the table
+
+- **WHEN** the user taps "Clear MCP audit log" in Settings and confirms the dialog
+- **THEN** every row in `audit_log` is deleted
+
+#### Scenario: MCP Status page shows recent entries
+
+- **WHEN** the user opens the MCP Status page
+- **THEN** the page renders the most recent 20 audit_log rows ordered by `ts_utc DESC`

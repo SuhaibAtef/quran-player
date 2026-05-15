@@ -74,28 +74,28 @@
 
 ## 8. In-flight artifact reconciliation (2.F)
 
-- [ ] 8.1 Edit [`openspec/changes/add-mcp-server/proposal.md`](../add-mcp-server/proposal.md) — strike HTTPS, `mcp_server`, `lib/data/mcp/`, per-command approval, and "audit log deferred"; replace each with the corrected wording.
-- [ ] 8.2 Edit [`openspec/changes/add-mcp-server/design.md`](../add-mcp-server/design.md) — replace the five divergent decision blocks. The shortest path: replace the whole *Decisions* section with a one-paragraph pointer to `align-mcp-server-with-explore-decisions/design.md` (D1–D5) and to *this* change's `design.md` (I1–I8).
-- [ ] 8.3 Rewrite [`openspec/changes/add-mcp-server/specs/mcp-server/spec.md`](../add-mcp-server/specs/mcp-server/spec.md) — adopt the corrected scenarios; remove the four per-command-approval scenarios named in `align-mcp-server-with-explore-decisions/specs/mcp-server/spec.md` under `## REMOVED Requirements`.
-- [ ] 8.4 Edit [`openspec/changes/add-mcp-server/tasks.md`](../add-mcp-server/tasks.md) — drop per-command-approval items, add scope-toggle + audit-log items.
-- [ ] 8.5 Run `openspec validate add-mcp-server` and confirm clean.
-- [ ] 8.6 Run `openspec validate align-mcp-server-with-explore-decisions` and confirm clean.
-- [ ] 8.7 Run `openspec validate realign-mcp-server-implementation` and confirm clean.
+- [x] 8.1 Edit [`openspec/changes/add-mcp-server/proposal.md`](../add-mcp-server/proposal.md) — strike HTTPS, `mcp_server`, `lib/data/mcp/`, per-command approval, and "audit log deferred"; replace each with the corrected wording.
+- [x] 8.2 Edit [`openspec/changes/add-mcp-server/design.md`](../add-mcp-server/design.md) — replace the five divergent decision blocks. *Took the table-pointer path: the *Decisions* section now lists D1–D5 / I1–I8 with cross-references to the two follow-up changes' design docs as the source of truth.*
+- [x] 8.3 Rewrite [`openspec/changes/add-mcp-server/specs/mcp-server/spec.md`](../add-mcp-server/specs/mcp-server/spec.md) — adopt the corrected scenarios; remove the four per-command-approval scenarios named in `align-mcp-server-with-explore-decisions/specs/mcp-server/spec.md` under `## REMOVED Requirements`. *Plus added a new "Persistent audit log" requirement with five scenarios per align-mcp-server D5.*
+- [x] 8.4 Edit [`openspec/changes/add-mcp-server/tasks.md`](../add-mcp-server/tasks.md) — drop per-command-approval items, add scope-toggle + audit-log items.
+- [x] 8.5 Run `openspec validate add-mcp-server` and confirm clean.
+- [x] 8.6 Run `openspec validate align-mcp-server-with-explore-decisions` and confirm clean.
+- [x] 8.7 Run `openspec validate realign-mcp-server-implementation` and confirm clean.
 
 ## 9. Documentation
 
-- [ ] 9.1 Update `AGENTS.md` *Lib layout* — add `packages/quran_mcp_server/`, the `user.db` file, and the scope-toggle model. Note that `user.db` is the only SQLite file that does not fail-closed.
-- [ ] 9.2 Update `AGENTS.md` *Project state* — describe the realigned MCP shape (loopback HTTP, `mcp_dart`, scope toggles, persistent audit log with 7-day prune).
-- [ ] 9.3 Update `THIRD_PARTY_NOTICES.md` — add `mcp_dart` attribution; remove `mcp_server`.
-- [ ] 9.4 Update `README.md` if it references the divergent MCP shape.
+- [x] 9.1 Update `AGENTS.md` *Lib layout* — add `packages/quran_mcp_server/`, the `user.db` file, and the scope-toggle model. Note that `user.db` is the only SQLite file that does not fail-closed.
+- [x] 9.2 Update `AGENTS.md` *Project state* — describe the realigned MCP shape (loopback HTTP, `mcp_dart`, scope toggles, persistent audit log with 7-day prune).
+- [x] 9.3 Update `THIRD_PARTY_NOTICES.md` — add `mcp_dart` attribution. *No `mcp_server` entry existed previously; nothing to remove.*
+- [x] 9.4 Update `README.md` if it references the divergent MCP shape.
 
 ## 10. Verification (2.G)
 
-- [ ] 10.1 `just check` clean — format, analyze, every test passes including the new isolation, scope-denied, prune, graceful-degrade, audit-rows, and args_summary tests.
-- [ ] 10.2 `openspec validate --specs` clean.
-- [ ] 10.3 Manual smoke test: enable MCP in Settings, copy the URL+token; run `curl http://127.0.0.1:<port>/mcp` with and without the bearer token. Confirm the unauthorized request returns 401 and the authorized one returns the tool listing.
-- [ ] 10.4 Manual scope test: toggle `Allow MCP playback control` OFF, ask the AI client to play surah Yasin. Confirm the response is `scope_denied` and the player state is unchanged.
-- [ ] 10.5 Manual audit-log persistence test: make several Mode A and Mode B calls, kill the app, relaunch. Confirm the audit_log entries persist and the MCP Status page renders them in DESC order.
-- [ ] 10.6 Manual prune test: insert a synthetic `audit_log` row with `ts_utc = now - 8 days` via maintainer SQL, restart the app, confirm the row is deleted and `appLogger.info` reported the count.
-- [ ] 10.7 Manual clear test: tap the Settings "Clear MCP audit log" button, confirm the dialog, verify the table is empty in MCP Status.
-- [ ] 10.8 Final boundary review: confirm via `grep -r "package:flutter" packages/quran_mcp_server/lib/` returns no matches; confirm only `adapter/mcp_dart_adapter.dart` imports `package:mcp_dart`.
+- [x] 10.1 `just check` clean — format, analyze, every test passes including the new isolation, scope-denied, prune, graceful-degrade, audit-rows, and args_summary tests. *Host 140/140, package 23/23 (verified after Section 9 doc updates).*
+- [x] 10.2 `openspec validate --specs` clean. *8/8 ratified specs validate; the three MCP changes (`add-mcp-server`, `align-mcp-server-with-explore-decisions`, `realign-mcp-server-implementation`) all `openspec validate <name>` cleanly.*
+- [ ] 10.3 Manual smoke test: enable MCP in Settings, copy the URL+token; run `curl http://127.0.0.1:<port>/mcp` with and without the bearer token. Confirm the unauthorized request returns 401 and the authorized one returns the tool listing. *Deferred to a human session — requires running the desktop window. Automated coverage exists at the dispatcher level (`scope_check_test.dart`) and the boundary level (`isolation_test.dart`); the missing piece is an end-to-end HTTP roundtrip via `HttpClient` against a live server start.*
+- [ ] 10.4 Manual scope test: toggle `Allow MCP playback control` OFF, ask the AI client to play surah Yasin. Confirm the response is `scope_denied` and the player state is unchanged. *Deferred to human session. Automated equivalent: `packages/quran_mcp_server/test/scopes/scope_check_test.dart` exercises every Mode B tool with the playback scope OFF and asserts `scope_denied` + no audio bridge invocation + audit row.*
+- [ ] 10.5 Manual audit-log persistence test: make several Mode A and Mode B calls, kill the app, relaunch. Confirm the audit_log entries persist and the MCP Status page renders them in DESC order. *Deferred to human session. Automated equivalent: `audit_log_repository_test.dart` covers DESC ordering + persistence semantics (file-backed SQLite per test).*
+- [ ] 10.6 Manual prune test: insert a synthetic `audit_log` row with `ts_utc = now - 8 days` via maintainer SQL, restart the app, confirm the row is deleted and `appLogger.info` reported the count. *Deferred to human session. Automated equivalent: `prune_test.dart` covers the same scenario at the repository level + `userDbStateProvider` runs the prune at first read.*
+- [ ] 10.7 Manual clear test: tap the Settings "Clear MCP audit log" button, confirm the dialog, verify the table is empty in MCP Status. *Deferred to human session.*
+- [x] 10.8 Final boundary review: confirm via `grep -r "package:flutter" packages/quran_mcp_server/lib/` returns no matches; confirm only `adapter/mcp_dart_adapter.dart` imports `package:mcp_dart`. *Both checks are automated by `packages/quran_mcp_server/test/isolation_test.dart` (R1 scenarios 1 & 2) and pass on every commit.*
