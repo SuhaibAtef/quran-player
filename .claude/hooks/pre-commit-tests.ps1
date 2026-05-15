@@ -24,8 +24,17 @@ if ($env:CLAUDE_HOOK_PRE_COMMIT_TESTS -eq 'running') { exit 0 }
 $env:CLAUDE_HOOK_PRE_COMMIT_TESTS = 'running'
 
 try {
-    $output = & flutter test 2>&1
-    $code = $LASTEXITCODE
+    $hostOutput = & flutter test 2>&1
+    $hostCode = $LASTEXITCODE
+    if ($hostCode -eq 0) {
+        $pkgOutput = & flutter test packages/quran_mcp_server/test/ 2>&1
+        $pkgCode = $LASTEXITCODE
+        $output = @($hostOutput) + $pkgOutput
+        $code = $pkgCode
+    } else {
+        $output = $hostOutput
+        $code = $hostCode
+    }
 } finally {
     Remove-Item Env:CLAUDE_HOOK_PRE_COMMIT_TESTS -ErrorAction SilentlyContinue
 }

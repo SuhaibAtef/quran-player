@@ -1,123 +1,134 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:quran_player/data/mcp/mcp_http_server.dart';
 import 'package:quran_mcp_server/quran_mcp_server.dart';
-
-import 'package:quran_player/domain/mcp/mcp_playback_command.dart';
-import 'package:quran_player/domain/quran/ayah_key.dart';
+import 'package:quran_player/app/state/mcp_server_provider.dart';
+import 'package:quran_player/app/state/mcp_settings_provider.dart';
 import 'package:quran_player/features/mcp_status/mcp_status_page.dart';
-import 'package:quran_player/features/mcp_status/state/mcp_server_controller.dart';
+
+class _FakeMcpServerController extends McpServerController {
+  _FakeMcpServerController(super.ref) {
+    state = McpServerStatus(
+      lifecycle: McpServerLifecycle.running,
+      uri: Uri.parse('http://127.0.0.1:8765/mcp'),
+      authToken: 'test-token-1234',
+    );
+  }
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<void> stop() async {}
+}
 
 void main() {
   testWidgets(
-    'MCP Status renders lifecycle, local mode, tools, and resources',
+    'MCP Status renders lifecycle, URL, token, scope state, tool counts, and audit list',
     (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: Directionality(
+        ProviderScope(
+          overrides: [
+            mcpServerControllerProvider.overrideWith(
+              _FakeMcpServerController.new,
+            ),
+            mcpRecentAuditProvider.overrideWith((ref) async => const []),
+            mcpSettingsControllerProvider.overrideWith(
+              (ref) => _ConfigurableSettings(
+                const McpSettings(
+                  enabled: true,
+                  scopePlayback: true,
+                  scopeBookmark: false,
+                  port: 8765,
+                ),
+              ),
+            ),
+          ],
+          child: const Directionality(
             textDirection: TextDirection.ltr,
-            child: McpStatusPage(),
+            child: MediaQuery(
+              data: MediaQueryData(size: Size(800, 1200)),
+              child: McpStatusPage(),
+            ),
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.byKey(McpStatusPageKeys.title), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.body), findsOneWidget);
       expect(find.byKey(McpStatusPageKeys.lifecycle), findsOneWidget);
-      expect(find.textContaining('State: disabled'), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.uri), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.token), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.scopes), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.tools), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.resources), findsOneWidget);
+      expect(find.byKey(McpStatusPageKeys.recent), findsOneWidget);
+
+      // Tool / resource definitions are static — verify the count rendered.
+      expect(find.text('Tools (${mcpToolDefinitions.length})'), findsOneWidget);
       expect(
-        find.textContaining('Local-only HTTPS Streamable HTTP MCP transport'),
+        find.text('Resources (${mcpResourceDefinitions.length})'),
         findsOneWidget,
       );
-      expect(find.byKey(McpStatusPageKeys.uri), findsNothing);
-      expect(find.byKey(McpStatusPageKeys.token), findsNothing);
-      expect(find.textContaining('search_quran'), findsOneWidget);
-      expect(find.textContaining('quran://metadata'), findsOneWidget);
     },
   );
 
-  testWidgets('MCP Status shows the running local URL and token', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mcpStatusControllerProvider.overrideWith(
-            _RunningMcpStatusController.new,
+  testWidgets(
+    'MCP Status renders the empty audit-log message when user.db has no rows',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mcpServerControllerProvider.overrideWith(
+              _FakeMcpServerController.new,
+            ),
+            mcpRecentAuditProvider.overrideWith((ref) async => const []),
+            mcpSettingsControllerProvider.overrideWith(
+              (ref) => _ConfigurableSettings(
+                const McpSettings(
+                  enabled: true,
+                  scopePlayback: false,
+                  scopeBookmark: false,
+                  port: 0,
+                ),
+              ),
+            ),
+          ],
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: MediaQuery(
+              data: MediaQueryData(size: Size(800, 1200)),
+              child: McpStatusPage(),
+            ),
           ),
-        ],
-        child: const Directionality(
-          textDirection: TextDirection.ltr,
-          child: McpStatusPage(),
         ),
-      ),
-    );
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('State: running'), findsOneWidget);
-    expect(find.byKey(McpStatusPageKeys.uri), findsOneWidget);
-    expect(find.byKey(McpStatusPageKeys.token), findsOneWidget);
-    expect(find.text('URL'), findsOneWidget);
-    expect(find.text('Token'), findsOneWidget);
-  });
-
-  testWidgets('MCP Status approves and denies pending playback commands', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: McpStatusPage(),
-        ),
-      ),
-    );
-    final container = ProviderScope.containerOf(
-      tester.element(find.byKey(McpStatusPageKeys.title)),
-    );
-    final controller = container.read(mcpStatusControllerProvider.notifier);
-
-    final approval = controller.request(
-      McpPlaybackCommand(
-        id: 'cmd-1',
-        type: McpPlaybackCommandType.playAyah,
-        ayahKey: AyahKey(2, 255),
-        clientName: 'Test Client',
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('Play Ayah 2:255'), findsOneWidget);
-    expect(find.byKey(McpStatusPageKeys.approve), findsOneWidget);
-
-    await tester.tap(find.byKey(McpStatusPageKeys.approve));
-    await tester.pumpAndSettle(const Duration(milliseconds: 150));
-    expect((await approval).isOk, isTrue);
-    expect(find.textContaining('approved'), findsOneWidget);
-
-    final denial = controller.request(
-      McpPlaybackCommand(
-        id: 'cmd-2',
-        type: McpPlaybackCommandType.playSurah,
-        surah: 36,
-      ),
-    );
-    await tester.pump();
-    await tester.tap(find.byKey(McpStatusPageKeys.deny));
-    await tester.pumpAndSettle(const Duration(milliseconds: 150));
-    expect((await denial).isErr, isTrue);
-    expect(find.textContaining('denied'), findsOneWidget);
-  });
+      expect(
+        find.text('No MCP activity yet, or audit log unavailable.'),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
-class _RunningMcpStatusController extends McpStatusController {
-  _RunningMcpStatusController(Ref ref)
-    : super(ref, const McpHttpServerFactory()) {
-    state = state.copyWith(
-      server: state.server.copyWith(
-        lifecycle: McpServerLifecycle.running,
-        uri: Uri.parse('https://localhost:12345/mcp'),
-        authToken: 'test-token',
-      ),
-    );
-  }
+/// Riverpod test seam — exposes the controller without touching SharedPreferences.
+class _ConfigurableSettings extends StateNotifier<McpSettings>
+    implements McpSettingsController {
+  _ConfigurableSettings(super.initial);
+
+  @override
+  Future<void> setEnabled(bool value) async {}
+
+  @override
+  Future<void> setScopePlayback(bool value) async {}
+
+  @override
+  Future<void> setScopeBookmark(bool value) async {}
+
+  @override
+  Future<void> setPort(int value) async {}
 }

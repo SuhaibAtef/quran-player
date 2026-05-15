@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show ThemeMode, showDialog;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
+import '../../app/state/mcp_settings_provider.dart';
 import '../../app/state/reader_mode.dart';
 import '../../app/state/reader_mode_provider.dart';
 import '../../app/state/tajweed_provider.dart';
 import '../../app/state/theme_mode_provider.dart';
+import '../../app/state/user_db_provider.dart';
 import '../../core/error/result.dart';
 import '../../data/audio/quran_com_audio_source.dart';
 import '../../domain/quran/quran_source.dart';
@@ -42,6 +44,12 @@ class SettingsPageKeys {
   static const tafsirUrl = Key('settings.tafsir.url');
   static const qcfSection = Key('settings.qcf_section');
   static const audioSection = Key('settings.audio_section');
+  static const mcpSection = Key('settings.mcp_section');
+  static const mcpEnableSwitch = Key('settings.mcp.enable_switch');
+  static const mcpPlaybackSwitch = Key('settings.mcp.playback_switch');
+  static const mcpBookmarkSwitch = Key('settings.mcp.bookmark_switch');
+  static const mcpClearAuditButton = Key('settings.mcp.clear_audit_button');
+  static const mcpUserDbNotice = Key('settings.mcp.user_db_notice');
 }
 
 class SettingsPage extends ConsumerWidget {
@@ -105,10 +113,181 @@ class SettingsPage extends ConsumerWidget {
           const SizedBox(height: 16),
           const _AudioAttributionSection(),
           const SizedBox(height: 16),
+          const _McpSection(),
+          const SizedBox(height: 16),
           const _QcfAttributionSection(),
         ],
       ),
     );
+  }
+}
+
+class _McpSection extends ConsumerWidget {
+  const _McpSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(mcpSettingsControllerProvider);
+    final controller = ref.read(mcpSettingsControllerProvider.notifier);
+    final auditAsync = ref.watch(userDbStateProvider);
+    final small = context.theme.typography.sm;
+
+    return Container(
+      key: SettingsPageKeys.mcpSection,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'MCP server',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const Text(
+            'Loopback-only HTTP server that lets local MCP clients query the '
+            'Quran corpus and (when granted) control playback. Disable to '
+            'stop the server entirely.',
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Expanded(child: Text('Enable MCP')),
+                FSwitch(
+                  key: SettingsPageKeys.mcpEnableSwitch,
+                  value: settings.enabled,
+                  onChange: (v) => controller.setEnabled(v),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Allow MCP playback control'),
+                      SizedBox(height: 2),
+                      Text(
+                        'Grants Mode B tools (play/pause/seek). When off, '
+                        'playback tools return scope_denied without changing '
+                        'player state.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                FSwitch(
+                  key: SettingsPageKeys.mcpPlaybackSwitch,
+                  value: settings.scopePlayback,
+                  onChange: settings.enabled
+                      ? (v) => controller.setScopePlayback(v)
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Allow MCP bookmark access'),
+                      SizedBox(height: 2),
+                      Text(
+                        'Reserved for future bookmark tools. Toggle has no '
+                        'effect today.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                FSwitch(
+                  key: SettingsPageKeys.mcpBookmarkSwitch,
+                  value: settings.scopeBookmark,
+                  // Disabled until bookmarks ship — but persisted shape stays
+                  // stable so the toggle row doesn't shift when it lands.
+                  onChange: null,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              FButton(
+                key: SettingsPageKeys.mcpClearAuditButton,
+                variant: FButtonVariant.outline,
+                onPress: () => _confirmClearAudit(context, ref),
+                prefix: const Icon(FIcons.eraser),
+                child: const Text('Clear MCP audit log'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          auditAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (e, st) => Text(
+              'Audit log status: $e',
+              key: SettingsPageKeys.mcpUserDbNotice,
+              style: small,
+            ),
+            data: (state) {
+              if (state.health == UserDbHealth.failed) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'MCP audit log unavailable — restart the app or check '
+                    'disk permissions. The Quran reader and audio player are '
+                    'unaffected.',
+                    key: SettingsPageKeys.mcpUserDbNotice,
+                    style: small,
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmClearAudit(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(auditLogRepositoryProvider);
+    if (repo == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => FDialog(
+        title: const Text('Clear MCP audit log?'),
+        body: const Text(
+          'This deletes every recorded MCP tool call. Cannot be undone.',
+        ),
+        actions: [
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FButton(
+            onPress: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await repo.clear();
+    }
   }
 }
 
