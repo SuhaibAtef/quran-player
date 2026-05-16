@@ -103,6 +103,23 @@ own LICENSE file.
   queue ordering, reader labels, and ayah highlighting are validated against the
   local integrity-checked `QuranRepository`.
 
+## MCP protocol — mcp_dart
+
+- **Package:** [`mcp_dart`](https://pub.dev/packages/mcp_dart) `^2.1.1`
+  (MIT, copyright leehack). Source: pub.dev; the only file permitted to
+  import it is
+  [`packages/quran_mcp_server/lib/src/adapter/mcp_dart_adapter.dart`](packages/quran_mcp_server/lib/src/adapter/mcp_dart_adapter.dart),
+  enforced by `packages/quran_mcp_server/test/isolation_test.dart`.
+- **Role:** provides the MCP protocol implementation (tool registration,
+  `CallToolResult` shape, JSON-RPC framing). The workspace package owns its
+  own `HttpServer.bind(InternetAddress.loopbackIPv4, port)` listener and
+  validates the bearer token + loopback origin before any request reaches
+  mcp_dart.
+- **Source policy:** mcp_dart is a protocol library only. It does not bring
+  any Quran text, audio, or reciter data into the project. All MCP responses
+  are sourced from the same verified `QuranRepository` / `AudioRepository`
+  the UI uses, via host adapter ports.
+
 ## Notes
 
 - This product is not endorsed by Tanzil or by the King Fahd Complex. We

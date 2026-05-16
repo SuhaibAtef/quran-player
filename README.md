@@ -11,7 +11,7 @@ The goal is a Quran player first — clean, respectful, accurate — with MCP as
 - **Search** Arabic ayah text locally.
 - **Bookmark** and resume.
 - **Expose** Quran data over MCP so AI clients can `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, and `list_reciters` without hallucinating references.
-- **Control** playback over MCP only after a visible per-command approval in the app.
+- **Control** playback over MCP only when the user has granted the playback scope in Settings (default OFF).
 
 ## Target platforms
 
@@ -30,23 +30,25 @@ Accuracy, attribution, privacy, and respectful Quran handling are more important
 
 - Quran text is preserved exactly as sourced — no edits, no AI regeneration, no invented references.
 - Translations and tafsir ship only with clear licensing and attribution.
-- MCP is local-only. Playback control via MCP requires user approval for each command.
-- No remote MCP access in the MVP. No arbitrary file access or shell command execution through MCP, ever.
+- MCP is loopback-only over plain HTTP on `127.0.0.1`. The bearer token is the auth boundary.
+- MCP playback control is gated on a pre-granted Settings scope (`Allow MCP playback control`, default OFF). Scope-denied calls return a structured `scope_denied` error and never touch player state.
+- Every MCP call (Mode A and Mode B) is recorded in a persistent SQLite audit log under the OS Application Support directory. The log auto-prunes rows older than 7 days at app start; a Settings button clears it.
+- No remote MCP access. No arbitrary file access or shell command execution through MCP, ever.
 - All MCP inputs are validated against strict schemas; secrets never live in the Flutter client.
 
 ## Architecture
 
 ```
-Flutter Desktop App         In-app Local Quran MCP Server
-  - Quran reader UI           - Quran resources (read)
-  - Audio player              - Quran tools (search, get_ayah, …)
-  - Search                    - Playback tools (user-gated)
-  - Bookmarks                 - Permission checks
-  - Settings                  - In-session command decisions
-  - MCP status screen
+Flutter Desktop App                  packages/quran_mcp_server/
+  - Quran reader UI                    - Loopback HTTP listener (mcp_dart adapter)
+  - Audio player                       - Read-only Quran tools + resources
+  - Search                             - Mode B playback tools (scope-gated)
+  - Bookmarks                          - Persistent SQLite audit log (user.db)
+  - Settings: MCP toggles              - No Flutter / Riverpod / SharedPreferences imports
+  - MCP status screen                  (host adapters bridge to Quran/Audio repos)
 ```
 
-The MCP surface is local-only and intentionally narrow. Read-only tools/resources use the same verified repositories as the UI. Playback tools route through the running app player and require per-command approval in MCP Status before they can change playback.
+The MCP surface is local-only and intentionally narrow. The MCP server lives in a Dart workspace package at [packages/quran_mcp_server/](packages/quran_mcp_server/) — Flutter-free, with an `isolation_test` enforcing the boundary. Read-only tools/resources use the same verified repositories as the UI through host adapter ports. Playback tools route through the running app player and gate on a pre-granted Settings scope (`Allow MCP playback control`, default OFF) before they can change playback.
 
 ### Code layout
 
@@ -66,15 +68,17 @@ lib/
   features/                    # one folder per top-level area; placeholders today
     home/  surah_detail/  search/  bookmarks/  settings/  mcp_status/
   data/quran/                  # SQLite-backed QuranRepository, manifest parser, integrity checker
-  data/mcp/                    # local MCP service, Streamable HTTP adapter, DTOs, validation, error mapping
+  data/mcp/                    # host-side MCP adapters (HostQuranDataAdapter, HostAudioAdapter), DTOs, error mapper
   domain/quran/                # framework-free Quran contracts (Surah, Ayah, AyahKey, QuranSource, QuranRepository)
-  domain/mcp/                  # framework-free MCP lifecycle, error, playback-command contracts
+packages/quran_mcp_server/     # workspace member: loopback MCP server (HTTP, mcp_dart, scope toggles, audit log). Flutter-free.
 tool/
   build_quran_db.dart          # maintainer-only build tool (see "Building the Quran DB")
 assets/quran/
   quran.sqlite                 # bundled, byte-deterministic
   manifest.json                # source attribution + SHA-256 checksums
 ```
+
+User-writable storage: `path_provider.getApplicationSupportDirectory()/quran/user.db`. Schema v1 has only `audit_log`. The bundled `quran.sqlite` and `muyassar.sqlite` remain read-only and fail-closed; `user.db` is the only SQLite file that fails soft (Quran reads + audio playback continue if it's unavailable).
 
 Conventions:
 
@@ -86,7 +90,7 @@ Conventions:
 
 ## Status
 
-Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer exposes local read-only Quran/reciter tools and user-approved playback commands through an in-app `mcp_server` Streamable HTTP endpoint behind an HTTPS localhost proxy started from MCP Status. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
+Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the realigned local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer lives in the workspace package at [packages/quran_mcp_server/](packages/quran_mcp_server/) — loopback HTTP on `127.0.0.1` via `mcp_dart`, pre-granted Settings scopes for Mode B playback, and a persistent SQLite audit log under the OS Application Support directory with a 7-day prune. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
@@ -105,7 +109,7 @@ Day-to-day commands are wrapped in the [Justfile](Justfile) — run `just` to li
 | `just get` | Install Dart/Flutter dependencies |
 | `just analyze` | Lints and type errors |
 | `just test` | All widget/unit tests |
-| `just mcp-smoke` | MCP service, HTTPS auth, safety-boundary, playback bridge, and status UI smoke tests |
+| `just mcp-smoke` | Workspace MCP package + MCP Status UI + user.db graceful-degrade smoke tests |
 | `just run [device]` | Launch on a device (default: `windows`) |
 | `just build <target>` | Release build (`windows`, `macos`, `linux`) |
 | `just check` | format + analyze + test (pre-commit gate) |
@@ -127,26 +131,28 @@ MVP search is intentionally basic and trustworthy: it searches only the bundled 
 
 ## MCP local integration
 
-The MCP implementation is intentionally local-only. Open MCP Status in the app, click **Start MCP Server**, then use the displayed `https://localhost:<port>/mcp` URL and bearer token with a local MCP client. The public local endpoint is HTTPS with an ephemeral self-signed localhost certificate, and it proxies to the package-backed MCP transport that still enforces the bearer token. The server binds only to loopback, generates a fresh token on each start, and stops when the user stops it or the app exits. Local clients must trust the app's self-signed localhost certificate or explicitly allow it for this local endpoint.
+The MCP implementation is intentionally local-only. Toggle **Enable MCP** in Settings, then open MCP Status in the app, click **Start MCP Server**, and use the displayed `http://127.0.0.1:<port>/mcp` URL and bearer token with a local MCP client. The server binds only to loopback (`127.0.0.1`), generates a fresh high-entropy token on each start, validates the bearer token before mcp_dart sees a request, and re-checks `connectionInfo.remoteAddress.isLoopback` per request as defence-in-depth.
 
-Read-only tools: `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, `list_reciters`.
+Read-only tools (always enabled when MCP is on): `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, `list_reciters`.
 
 Read-only resources: `quran://metadata`, `quran://surahs`, `quran://surah/{surah}`, `quran://ayah/{surah}/{ayah}`, `quran://reciters`.
 
-Playback tools: `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, `set_repeat`. Each playback request creates a pending approval in MCP Status; denying or timing out leaves player state unchanged. `set_repeat` currently accepts only `off`, matching the player’s current no-repeat behavior.
+Playback tools (gated on `Allow MCP playback control`, default OFF): `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, `set_repeat`. When the toggle is OFF, every Mode B call returns a structured `scope_denied` error without invoking the audio bridge. `set_repeat` currently accepts only `off`, matching the player’s current no-repeat behavior.
+
+Every call — Mode A and Mode B, success and failure — is appended to a persistent SQLite `audit_log` table in `user.db` under `path_provider.getApplicationSupportDirectory()/quran/`. `search_quran` queries are truncated at 128 codepoints with a `…[+N more]` marker before being persisted. The MCP Status page renders the most recent 20 rows; Settings has a "Clear MCP audit log" button. Rows older than 7 days are pruned on app start.
 
 Generic local MCP client shape:
 
 ```json
 {
-  "url": "https://localhost:<port>/mcp",
+  "url": "http://127.0.0.1:<port>/mcp",
   "headers": {
     "Authorization": "Bearer <token shown in MCP Status>"
   }
 }
 ```
 
-The playback bridge is available only while the Flutter app and MCP server are running. Any playback tool still creates a visible approval request in MCP Status before it can change audio state.
+The audio bridge is available only while the Flutter app and MCP server are running. Mode B tools fail with `scope_denied` if the playback scope is OFF, or with `app_unavailable` / `player_unavailable` if the player can't accept commands.
 
 Development smoke check:
 

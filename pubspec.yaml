@@ -21,6 +21,9 @@ version: 1.0.0+1
 environment:
   sdk: ^3.11.0
 
+workspace:
+  - packages/quran_mcp_server
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -70,11 +73,11 @@ dependencies:
   media_kit: ^1.2.6
   media_kit_libs_audio: ^1.0.7
 
-  # Local MCP Streamable HTTP server with bearer-token auth.
-  mcp_server: ^2.0.0
-
-  # Generates ephemeral self-signed localhost certificates for the HTTPS MCP proxy.
-  basic_utils: ^5.8.2
+  # Workspace member: loopback MCP server. Imports only pure Dart contracts;
+  # the host app provides the Quran/audio/auditlog/scope-check adapters at
+  # composition time. See packages/quran_mcp_server/ and AGENTS.md > Lib layout.
+  quran_mcp_server:
+    path: packages/quran_mcp_server
 
 dev_dependencies:
   flutter_test:
@@ -89,6 +92,11 @@ dev_dependencies:
 
   # Maintainer-only build tool (`tool/build_quran_db.dart`). Not shipped at runtime.
   sqlite3: ^2.4.6
+
+  # Used by test/workspace_member_test.dart to parse the root pubspec.yaml and
+  # assert the workspace declaration. Test-only — available transitively at
+  # runtime, but imported explicitly here for test analyzer clarity.
+  yaml: ^3.1.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

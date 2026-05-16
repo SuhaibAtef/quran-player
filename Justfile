@@ -24,9 +24,10 @@ analyze:
 format:
     dart format .
 
-# Run all widget/unit tests
+# Run all widget/unit tests (host app + workspace packages)
 test:
     flutter test
+    flutter test packages/quran_mcp_server/test/
 
 # Run a single test file: `just test-file test/widget_test.dart`
 test-file FILE:
@@ -36,9 +37,9 @@ test-file FILE:
 test-name NAME:
     flutter test --name "{{NAME}}"
 
-# Smoke-test the local MCP contract, playback approval bridge, and MCP Status UI.
+# Smoke-test the workspace package + the host-side MCP UI / providers.
 mcp-smoke:
-    flutter test test/data/mcp/mcp_server_service_test.dart test/data/mcp/mcp_http_server_test.dart test/data/mcp/mcp_import_boundary_test.dart test/features/player/mcp_playback_bridge_test.dart test/features/mcp_status/mcp_status_page_test.dart
+    flutter test packages/quran_mcp_server/test/ test/features/mcp_status/mcp_status_page_test.dart test/data/user_db/user_db_graceful_degrade_test.dart
 
 # List connected devices and emulators
 devices:
