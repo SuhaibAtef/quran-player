@@ -5,7 +5,6 @@
 Defines the user-observable contract for the Quran Companion application shell: the app launches on Windows desktop into a ForUI-themed window with a navigation skeleton covering every top-level area in the IDEA.md MVP (Home/Surahs, Search, Bookmarks, Settings, MCP Status), supports light/dark/system theme modes that persist across restarts, and exposes the layered `lib/` structure that all subsequent feature changes build into.
 
 This spec was promoted from the [`bootstrap-foundation`](../../changes/archive/2026-05-09-bootstrap-foundation/) change. Future changes that touch shell behavior (new top-level destination, navigation chrome rework, theme variant swap) MUST modify this spec via a delta and re-promote on archive.
-
 ## Requirements
 ### Requirement: Application launches into a themed shell
 
@@ -86,4 +85,43 @@ The repository SHALL include a Flutter widget test that boots the real `App` wid
 
 - **WHEN** a developer attempts a `git commit` and the [.claude/hooks/pre-commit-tests.ps1](../../../../.claude/hooks/pre-commit-tests.ps1) hook fires
 - **THEN** the smoke test is included in the run and a failing test blocks the commit
+
+### Requirement: MCP Status shows server and permission state
+
+The MCP Status top-level destination SHALL show the local MCP server lifecycle state, start/stop controls, local-only authenticated transport details, exposed read-only and playback capabilities, pending playback permission requests, and recent in-session command decisions.
+
+#### Scenario: Status page shows local server state
+
+- **WHEN** the user opens MCP Status while the server is disabled, starting, running, stopped, or failed
+- **THEN** the page displays the current lifecycle state without leaving the app shell
+
+#### Scenario: Status page identifies local-only mode
+
+- **WHEN** the MCP Status page renders
+- **THEN** it indicates that the MCP server is local-only and does not advertise remote access
+
+#### Scenario: User starts the local MCP server
+
+- **WHEN** the user presses Start MCP Server
+- **THEN** MCP Status starts the in-app loopback server and shows the HTTPS MCP URL plus bearer token
+
+#### Scenario: User stops the local MCP server
+
+- **WHEN** the user presses Stop while the MCP server is running
+- **THEN** the loopback server stops accepting local MCP requests and MCP Status no longer shows an active token
+
+#### Scenario: Status page lists exposed capabilities
+
+- **WHEN** the MCP server capabilities are available
+- **THEN** the page shows the read-only Quran/reciter tools and playback-control tools exposed by this change
+
+#### Scenario: Pending playback command is reviewable
+
+- **WHEN** an MCP playback command is waiting for approval
+- **THEN** MCP Status shows the requested command, Quran reference or range when applicable, and approve/deny controls
+
+#### Scenario: Recent decision is visible for the session
+
+- **WHEN** the user approves, denies, or a pending playback command times out
+- **THEN** MCP Status shows the recent in-session decision without requiring a persistent audit log
 

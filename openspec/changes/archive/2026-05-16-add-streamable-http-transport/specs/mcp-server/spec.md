@@ -103,22 +103,13 @@ Every `tools/call` flowing through the streamable HTTP transport SHALL pass thro
 - **WHEN** an integration test sends `tools/call` for `search_quran` (Mode A) and then `pause_playback` (Mode B with playback scope ON), both over the streamable HTTP transport
 - **THEN** two `audit_log` rows are appended, one per call, each with the correct `tool_name`, `result_status`, and `scope_at_time`
 
-## REMOVED Requirements
+<!--
+Note: the hand-rolled `POST /mcp` JSON shape, the `GET /mcp` discovery
+endpoint, and the `/resource/<uri>` path that the realignment shipped were
+never discrete `### Requirement:` blocks in the canonical `mcp-server` spec —
+they were implementation details described inside other requirements'
+scenarios. The ADDED requirements above supersede them; there is nothing to
+list under a `## REMOVED Requirements` header. The README and the
+add-streamable-http-transport proposal document the client-facing migration.
+-->
 
-### Requirement: Custom POST /mcp request shape
-
-**Reason:** Replaced by the standard streamable HTTP transport. Clients now use the JSON-RPC `2.0` envelope (`{"jsonrpc":"2.0","id":N,"method":"...","params":{...}}`) over the same `POST /mcp` URL instead of the previous `{"method":"...","params":{...}}` shape.
-
-**Migration:** Any external script or smoke recipe using the custom shape MUST be rewritten to send the JSON-RPC envelope. The README's "MCP local integration" section gets a worked example. No external consumers exist yet (the previous shape shipped one week before this change).
-
-### Requirement: Hand-rolled GET /mcp discovery endpoint
-
-**Reason:** Standard MCP clients discover tools and resources via `tools/list` and `resources/list` over the transport. The `GET /mcp` snapshot was redundant once the transport became standard.
-
-**Migration:** Anything fetching `GET /mcp` switches to a JSON-RPC `tools/list` POST.
-
-### Requirement: Hand-rolled /resource/<uri> path
-
-**Reason:** Resources are now discoverable and readable through the standard `resources/list` and `resources/read` JSON-RPC methods. The side-channel HTTP path is no longer useful.
-
-**Migration:** Any client fetching `GET /resource/quran://surahs` (URL-encoded) switches to a JSON-RPC `resources/read` POST with `params.uri = "quran://surahs"`.
