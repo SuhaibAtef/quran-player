@@ -12,10 +12,18 @@ import 'scopes/scope.dart';
 import 'tools/tool_handlers.dart';
 
 const mcpEndpointPath = '/mcp';
-const mcpResourcePathPrefix = '/resource/';
 
 /// Top-level handle for a running MCP server. Constructed by the host app
 /// composition layer with the four ports + scope check.
+///
+/// Spec mcp-server (post `add-streamable-http-transport`):
+/// - Plain HTTP on `127.0.0.1` (loopback enforced at bind + per-request).
+/// - Bearer-token gate runs *before* mcp_dart's `StreamableHTTPServerTransport`
+///   sees a request. Unauthorized → `401`, no transport invocation, no
+///   `mcp-session-id` issued.
+/// - Standard JSON-RPC `2.0` wire protocol via mcp_dart's transport.
+/// - Per-tool/per-resource calls flow through [Dispatcher] for scope check
+///   + audit log.
 class QuranMcpServer {
   QuranMcpServer({
     required McpQuranDataPort quran,
@@ -37,7 +45,7 @@ class QuranMcpServer {
 
   final ScopeCheck _scopeCheck;
   final McpDartAdapter _adapter;
-  final _Random _random = _Random();
+  final Random _random = Random.secure();
 
   HttpServer? _httpServer;
   String? _bearerToken;
@@ -61,6 +69,12 @@ class QuranMcpServer {
     if (_httpServer != null) {
       throw StateError('QuranMcpServer.start called while already running');
     }
+
+    // Wire mcp_dart's McpServer + StreamableHTTPServerTransport BEFORE
+    // accepting any requests so the very first authorized request finds the
+    // transport ready.
+    await _adapter.start();
+
     final server = await HttpServer.bind(_loopback, port);
     final boundPort = server.port;
     _httpServer = server;
@@ -85,6 +99,7 @@ class QuranMcpServer {
     if (server != null) {
       await server.close(force: true);
     }
+    await _adapter.stop();
   }
 
   Future<void> _serve(HttpServer server) async {
@@ -98,6 +113,9 @@ class QuranMcpServer {
         continue;
       }
 
+      // Bearer-token gate runs BEFORE mcp_dart sees the request. Unauthorized
+      // requests never reach the transport, never create a session, never
+      // touch the dispatcher.
       final auth = request.headers.value(HttpHeaders.authorizationHeader);
       final expected = 'Bearer ${_bearerToken ?? ''}';
       if (_bearerToken == null || auth != expected) {
@@ -107,144 +125,35 @@ class QuranMcpServer {
         continue;
       }
 
-      try {
-        await _handle(request);
-      } on Object catch (e) {
-        request.response.statusCode = HttpStatus.internalServerError;
-        request.response.write(jsonEncode({'error': e.toString()}));
+      // Only the MCP endpoint path is exposed. Everything else 404s without
+      // the transport seeing it.
+      if (request.uri.path != mcpEndpointPath) {
+        request.response.statusCode = HttpStatus.notFound;
         await request.response.close();
+        continue;
+      }
+
+      try {
+        await _adapter.handleRequest(request);
+      } on Object catch (e) {
+        // mcp_dart's transport is responsible for writing JSON-RPC error
+        // responses for protocol-level failures. This catch is for failures
+        // upstream of the transport (e.g., the response was already started
+        // and the underlying connection dropped). We log and move on.
+        _logTransportFailure(e);
       }
     }
   }
 
-  Future<void> _handle(HttpRequest request) async {
-    final path = request.uri.path;
-    if (path == mcpEndpointPath) {
-      return _handleMcp(request);
-    }
-    if (path.startsWith(mcpResourcePathPrefix)) {
-      final uri = path.substring(mcpResourcePathPrefix.length);
-      return _handleResource(request, Uri.decodeComponent(uri));
-    }
-    request.response.statusCode = HttpStatus.notFound;
-    await request.response.close();
-  }
-
-  Future<void> _handleMcp(HttpRequest request) async {
-    if (request.method == 'GET') {
-      // Discovery: return tool + resource metadata. Some MCP clients call
-      // this before opening the streamable session.
-      request.response.headers.contentType = ContentType.json;
-      request.response.write(
-        jsonEncode({
-          'tools': mcpToolDefinitions.map((t) => t.toJson()).toList(),
-          'resources': mcpResourceDefinitions.map((r) => r.toJson()).toList(),
-          'scopes': currentScopesCsv(),
-        }),
-      );
-      await request.response.close();
-      return;
-    }
-
-    if (request.method != 'POST') {
-      request.response.statusCode = HttpStatus.methodNotAllowed;
-      await request.response.close();
-      return;
-    }
-
-    final body = await utf8.decoder.bind(request).join();
-    final payload = body.isEmpty
-        ? const <String, Object?>{}
-        : jsonDecode(body) as Map<String, Object?>;
-
-    final method = payload['method'] as String?;
-    final params =
-        (payload['params'] as Map?)?.cast<String, Object?>() ??
-        const <String, Object?>{};
-
-    if (method == 'tools/list') {
-      request.response.headers.contentType = ContentType.json;
-      request.response.write(
-        jsonEncode({
-          'tools': mcpToolDefinitions.map((t) => t.toJson()).toList(),
-        }),
-      );
-      await request.response.close();
-      return;
-    }
-
-    if (method == 'resources/list') {
-      request.response.headers.contentType = ContentType.json;
-      request.response.write(
-        jsonEncode({
-          'resources': mcpResourceDefinitions.map((r) => r.toJson()).toList(),
-        }),
-      );
-      await request.response.close();
-      return;
-    }
-
-    if (method == 'tools/call') {
-      final name = params['name'] as String? ?? '';
-      final args =
-          (params['arguments'] as Map?)?.cast<String, Object?>() ??
-          const <String, Object?>{};
-      final result = await _adapter.dispatcher.callTool(name, args);
-      request.response.headers.contentType = ContentType.json;
-      if (result.isError) {
-        request.response.write(jsonEncode({'error': result.error!.toJson()}));
-      } else {
-        request.response.write(jsonEncode({'result': result.data}));
-      }
-      await request.response.close();
-      return;
-    }
-
-    if (method == 'resources/read') {
-      final uri = params['uri'] as String? ?? '';
-      final result = await _adapter.readResource(uri);
-      request.response.headers.contentType = ContentType.json;
-      if (result.isError) {
-        request.response.write(jsonEncode({'error': result.error!.toJson()}));
-      } else {
-        request.response.write(jsonEncode({'result': result.data}));
-      }
-      await request.response.close();
-      return;
-    }
-
-    request.response.statusCode = HttpStatus.badRequest;
-    request.response.write(
-      jsonEncode({
-        'error': {
-          'code': 'invalid_input',
-          'message': 'Unsupported MCP method.',
-        },
-      }),
-    );
-    await request.response.close();
-  }
-
-  Future<void> _handleResource(HttpRequest request, String uri) async {
-    final result = await _adapter.readResource(uri);
-    request.response.headers.contentType = ContentType.json;
-    if (result.isError) {
-      request.response.statusCode = HttpStatus.badRequest;
-      request.response.write(jsonEncode({'error': result.error!.toJson()}));
-    } else {
-      request.response.write(jsonEncode(result.data));
-    }
-    await request.response.close();
+  void _logTransportFailure(Object error) {
+    // The package is Flutter-free; no appLogger here. The host app reads
+    // mcpServerControllerProvider for lifecycle state and surfaces failures
+    // via that channel. Stderr is the only thing available cross-platform.
+    stderr.writeln('[quran_mcp_server] transport failure: $error');
   }
 
   String _generateToken() {
     final bytes = List<int>.generate(32, (_) => _random.nextInt(256));
     return base64UrlEncode(bytes).replaceAll('=', '');
   }
-}
-
-class _Random {
-  _Random();
-  final Random _rng = Random.secure();
-  int nextInt(int max) => _rng.nextInt(max);
 }

@@ -131,25 +131,59 @@ MVP search is intentionally basic and trustworthy: it searches only the bundled 
 
 ## MCP local integration
 
-The MCP implementation is intentionally local-only. Toggle **Enable MCP** in Settings, then open MCP Status in the app, click **Start MCP Server**, and use the displayed `http://127.0.0.1:<port>/mcp` URL and bearer token with a local MCP client. The server binds only to loopback (`127.0.0.1`), generates a fresh high-entropy token on each start, validates the bearer token before mcp_dart sees a request, and re-checks `connectionInfo.remoteAddress.isLoopback` per request as defence-in-depth.
+The MCP implementation is intentionally local-only and speaks the standard MCP **streamable HTTP** wire protocol via [`mcp_dart`](https://pub.dev/packages/mcp_dart)'s `StreamableHTTPServerTransport`. Toggle **Enable MCP** in Settings, then open MCP Status in the app, click **Start MCP Server**, and use the displayed `http://127.0.0.1:<port>/mcp` URL and bearer token with any compliant streamable-HTTP MCP client. The server binds only to loopback (`127.0.0.1`), generates a fresh high-entropy token on each start, validates the bearer token before mcp_dart sees a request, and re-checks `connectionInfo.remoteAddress.isLoopback` per request as defence-in-depth.
 
 Read-only tools (always enabled when MCP is on): `search_quran`, `get_ayah`, `get_surah`, `list_surahs`, `list_reciters`.
 
-Read-only resources: `quran://metadata`, `quran://surahs`, `quran://surah/{surah}`, `quran://ayah/{surah}/{ayah}`, `quran://reciters`.
+Read-only resources: `quran://metadata`, `quran://surahs`, `quran://reciters` (the templated `quran://surah/{surah}` and `quran://ayah/{surah}/{ayah}` are accessible via the equivalent `get_surah` / `get_ayah` tools).
 
 Playback tools (gated on `Allow MCP playback control`, default OFF): `play_surah`, `play_ayah`, `pause_playback`, `resume_playback`, `stop_playback`, `set_repeat`. When the toggle is OFF, every Mode B call returns a structured `scope_denied` error without invoking the audio bridge. `set_repeat` currently accepts only `off`, matching the player’s current no-repeat behavior.
 
 Every call — Mode A and Mode B, success and failure — is appended to a persistent SQLite `audit_log` table in `user.db` under `path_provider.getApplicationSupportDirectory()/quran/`. `search_quran` queries are truncated at 128 codepoints with a `…[+N more]` marker before being persisted. The MCP Status page renders the most recent 20 rows; Settings has a "Clear MCP audit log" button. Rows older than 7 days are pruned on app start.
 
-Generic local MCP client shape:
+### Connect with MCP Inspector
 
-```json
-{
-  "url": "http://127.0.0.1:<port>/mcp",
-  "headers": {
-    "Authorization": "Bearer <token shown in MCP Status>"
-  }
-}
+The fastest way to drive the server interactively:
+
+```sh
+npx @modelcontextprotocol/inspector
+```
+
+Pick **Streamable HTTP** as the transport, paste the URL from MCP Status, and add `Authorization: Bearer <token>` as a custom header. Click **List Tools** to see all eleven; pick one (e.g. `get_ayah` with `surah=2 ayah=255`) to call.
+
+### Connect with curl (JSON-RPC `2.0`)
+
+The transport speaks JSON-RPC `2.0`. Every call needs the bearer token and (after `initialize`) the `mcp-session-id` header from the initialize response. Set `URL` and `TOKEN` shell variables, then:
+
+```sh
+# 1. initialize — returns the mcp-session-id response header
+curl -i "$URL" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"0.1"}}}'
+
+# 2. tools/list — pass the session-id from step 1
+SID="<paste mcp-session-id from step 1's response headers>"
+curl "$URL" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "mcp-session-id: $SID" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+# 3. tools/call — the same session-id reused
+curl "$URL" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "mcp-session-id: $SID" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_ayah","arguments":{"surah":2,"ayah":255}}}'
+
+# Without the bearer token — 401, transport never sees it
+curl -i "$URL" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
 The audio bridge is available only while the Flutter app and MCP server are running. Mode B tools fail with `scope_denied` if the playback scope is OFF, or with `app_unavailable` / `player_unavailable` if the player can't accept commands.
