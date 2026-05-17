@@ -66,24 +66,51 @@ own LICENSE file.
   or tafsir-augmented search must continue to credit both the King Fahd
   Complex (original author) and the `spa5k/tafsir_api` mirror (redistributor).
 
-## Mushaf rendering — qcf_quran_plus + QCF glyph fonts
+## Mushaf rendering — Tarteel QUL (QPC V4) + KFGQPC fonts
 
-- **Package:** [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus)
-  v0.0.8 (MIT, copyright Hussein). Source: pub.dev; consumed only by
-  [`lib/data/quran/mushaf_locator_qcf.dart`](lib/data/quran/mushaf_locator_qcf.dart)
-  and [`lib/features/reader/widgets/page_mushaf_view.dart`](lib/features/reader/widgets/page_mushaf_view.dart).
-- **Bundled fonts:** the package ships QCF (King Fahd Glorious Qur'an Complex)
-  glyph fonts and the standard 604-page Madani mushaf metadata. The package's
-  own LICENSE file (MIT) does not separately reproduce the QCF font license.
-- **License status:** maintainer verified during the `mushaf-reader` change
-  that the bundled QCF fonts are allowed for this project and may be
-  redistributed with the desktop app. Keep this attribution with any release
-  that includes the page-mode reader assets.
+Page mode renders the printed mushaf through the in-repo `tarteel_qul`
+rendering engine ([`packages/tarteel_qul/`](packages/tarteel_qul/)) from data
+published by the **Tarteel Quran Universal Library (QUL)**. The `tarteel_qul`
+package itself bundles and redistributes **nothing** — it is asset-agnostic and
+ships no QUL data or fonts. The Quran Companion **application** bundles the QUL
+resources below into its built binary.
 
-- **Source policy:** the package supplies *layout and glyphs only*. Canonical
-  Quran text remains the integrity-checked Tanzil corpus described in the
-  previous section. Selection, copy, search, and MCP responses always go
-  through `QuranRepository` — never through QCF glyph data.
+- **Mushaf layout:** QPC V4 15-line page layout (`qpc-v4-tajweed-15-lines.db`)
+  — page-by-page line geometry for the standard 604-page Madani mushaf.
+- **Word script:** QPC V4 word-by-word glyph script (`qpc-v4.db`).
+- **Fonts:** KFGQPC (King Fahd Glorious Qur'an Printing Complex) V4 per-page
+  fonts (`ttf.zip`, 604 `pN.ttf` files) — these are colour (tajweed) fonts
+  whose glyphs are pre-shaped per page, each carrying six `CPAL` palettes
+  (light/dark, tajweed/plain).
+- **Header fonts:** the QUL `QCF_SurahHeader_COLOR` font (ornamental surah
+  headers, a `COLR` colour font) and the QUL `quran-common` font (the
+  bismillah glyph), used to render the reader's `surah_name` / `basmallah`
+  lines. The QUL `QCF_FullSurah` "surah name" OpenType-SVG font was evaluated
+  and **not** bundled — Flutter does not render OpenType-`SVG ` colour fonts.
+- **Upstream:** [Tarteel QUL — qul.tarteel.ai](https://qul.tarteel.ai/). The
+  QUL resources are downloaded by a contributor into the gitignored
+  `assets/qul/` directory (see the README setup step); they are never
+  committed to this repository.
+- **Distribution path used:** `pubspec.yaml` declares the three QUL files as
+  Flutter assets, so `flutter build` bundles them into the application binary.
+  The application therefore **redistributes the KFGQPC V4 fonts and the QUL
+  layout/word data** to end users.
+- **License status:** maintainer verified that the Tarteel QUL mushaf
+  resources and the KFGQPC V4 fonts are published for open use and may be
+  redistributed inside the Quran Companion application binary. Keep this
+  attribution with any release that includes the page-mode reader assets. The
+  `tarteel_qul` package, distributed separately, redistributes none of this
+  and stays clean for pub.dev.
+- **Confined imports:** `package:tarteel_qul/` is imported by exactly two host
+  files —
+  [`lib/data/quran/mushaf_engine.dart`](lib/data/quran/mushaf_engine.dart) and
+  [`lib/features/reader/widgets/page_mushaf_view.dart`](lib/features/reader/widgets/page_mushaf_view.dart)
+  — enforced by `test/data/quran/tarteel_qul_import_boundary_test.dart`.
+
+- **Source policy:** QUL supplies *layout and glyphs only*. Canonical Quran
+  text remains the integrity-checked Tanzil corpus described above. Selection,
+  copy, search, and MCP responses always go through `QuranRepository` — never
+  through QUL glyph data.
 
 ## Audio recitation — Quran.com / Quran Foundation
 

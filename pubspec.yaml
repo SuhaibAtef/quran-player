@@ -23,6 +23,8 @@ environment:
 
 workspace:
   - packages/quran_mcp_server
+  - packages/tarteel_qul
+  - packages/tarteel_qul/example
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -64,11 +66,6 @@ dependencies:
   # SHA-256 for runtime integrity verification of the bundled DB.
   crypto: ^3.0.6
 
-  # Visual mushaf rendering (QCF glyph fonts + page metadata).
-  # Used only by lib/data/quran/mushaf_locator_qcf.dart and
-  # lib/features/reader/widgets/page_mushaf_view.dart — every other
-  # feature reaches the printed-mushaf layout via the MushafLocator seam.
-  qcf_quran_plus: ^0.0.8
   http: ^1.6.0
   media_kit: ^1.2.6
   media_kit_libs_audio: ^1.0.7
@@ -78,6 +75,17 @@ dependencies:
   # composition time. See packages/quran_mcp_server/ and AGENTS.md > Lib layout.
   quran_mcp_server:
     path: packages/quran_mcp_server
+
+  # Workspace member: the QUL printed-mushaf rendering engine. Page mode
+  # renders through this package; only lib/data/quran/mushaf_locator_qul.dart
+  # and lib/features/reader/widgets/page_mushaf_view.dart import it — every
+  # other layer reaches the printed mushaf via the MushafLocator seam.
+  tarteel_qul:
+    path: packages/tarteel_qul
+
+  # Unzips per-page mushaf fonts on demand from the bundled assets/qul/ttf.zip.
+  # Used only by the host MushafAssetSource in lib/data/quran/.
+  archive: ^4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -114,6 +122,16 @@ flutter:
     - assets/quran/manifest.json
     - assets/tafsir/muyassar.sqlite
     - assets/tafsir/manifest.json
+    # QUL mushaf rendering data — page mode renders through these. NOT in the
+    # repo (assets/qul/ is gitignored); a contributor downloads them per the
+    # README setup step. A fresh clone cannot build until the download runs.
+    - assets/qul/qpc-v4-tajweed-15-lines.db
+    - assets/qul/qpc-v4.db
+    - assets/qul/ttf.zip
+    # QUL ornamental surah-header (COLR) + quran-common fonts — render the
+    # reader's surah_name / basmallah lines and the Surahs-list names.
+    - assets/qul/surah_headers/QCF_SurahHeader_COLOR-Regular.ttf
+    - assets/qul/juz_name_font/quran-common.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

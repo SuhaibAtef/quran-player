@@ -52,3 +52,10 @@ app.*.map.json
 # Codex compatibility mirror. On Windows this is a local junction to
 # .claude/skills so Codex can discover repo skills without duplicating them.
 .agents/
+
+# QUL mushaf rendering assets. A contributor downloads these from
+# qul.tarteel.ai into assets/qul/ per the README setup step; they are never
+# committed (third-party fonts + databases, ~70 MB). pubspec.yaml declares the
+# three files the build needs — qpc-v4-tajweed-15-lines.db, qpc-v4.db,
+# ttf.zip — so `flutter build` bundles them into the binary.
+assets/qul/

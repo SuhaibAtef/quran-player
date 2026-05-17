@@ -10,8 +10,9 @@ import 'package:quran_player/app/state/theme_mode_provider.dart';
 import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/quran/integrity_checker.dart';
 import 'package:quran_player/data/quran/manifest.dart';
+import 'package:quran_player/data/quran/mushaf_engine.dart';
+import 'package:quran_player/data/quran/mushaf_fonts.dart';
 import 'package:quran_player/data/quran/mushaf_locator_provider.dart';
-import 'package:quran_player/data/quran/mushaf_locator_qcf.dart';
 import 'package:quran_player/data/quran/providers.dart';
 import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/ayah.dart';
@@ -23,6 +24,8 @@ import 'package:quran_player/features/_errors/bootstrapping_screen.dart';
 import 'package:quran_player/features/_errors/data_integrity_screen.dart';
 import 'package:quran_player/features/home/home_page.dart';
 import 'package:quran_player/features/reader/reader_screen.dart';
+import 'package:tarteel_qul/fixtures.dart';
+import 'package:tarteel_qul/tarteel_qul.dart' as qul;
 
 import '../../_fakes/fake_quran_repository.dart';
 import '../../_fakes/fake_tafsir_bootstrap.dart';
@@ -64,8 +67,6 @@ List<Surah> _full114() => List<Surah>.generate(
 
 Map<AyahKey, Ayah> _seedAyahs() {
   final out = <AyahKey, Ayah>{};
-  // Seed enough ayahs for text-mode tests on a couple of representative
-  // surahs without bloating the fake.
   for (var ayah = 1; ayah <= 7; ayah++) {
     final key = AyahKey(1, ayah);
     out[key] = Ayah(key: key, text: 'الفاتحة آية $ayah');
@@ -75,6 +76,23 @@ Map<AyahKey, Ayah> _seedAyahs() {
     out[key] = Ayah(key: key, text: 'البقرة آية $ayah');
   }
   return out;
+}
+
+/// A non-fallback [MushafEngine] over `tarteel_qul`'s deterministic demo
+/// layout — so the route tests do not depend on the gitignored QUL download.
+/// The demo covers surah 1 (page 1) and surah 2 (pages 2–3).
+///
+/// Opened once in `setUpAll`, outside the `testWidgets` zone — sqflite's
+/// isolate-backed open deadlocks if called inside it.
+late MushafEngine _demoEngine;
+
+Future<MushafEngine> _openDemoEngine() async {
+  final source = DemoMushafAssetSource();
+  final opened = await qul.MushafLayoutRepository.open(source);
+  return MushafEngine.forTest(
+    repository: (opened as qul.MushafOk<qul.MushafLayoutRepository>).value,
+    assetSource: source,
+  );
 }
 
 Future<void> _pump(
@@ -93,6 +111,10 @@ Future<void> _pump(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
+  final engine = forceLocatorFallback
+      ? const MushafEngine.unavailable()
+      : _demoEngine;
+
   final repo = FakeQuranRepository(surahs: _full114(), ayahs: _seedAyahs());
   await tester.pumpWidget(
     ProviderScope(
@@ -105,13 +127,8 @@ Future<void> _pump(
           (ref) async => Result.ok(fakeTafsirBootstrap()),
         ),
         quranRepositoryProvider.overrideWithValue(repo),
-        if (forceLocatorFallback)
-          mushafLocatorProvider.overrideWithValue(
-            const MushafLocatorStatus(
-              locator: TextOnlyMushafLocator(),
-              usingFallback: true,
-            ),
-          ),
+        mushafEngineProvider.overrideWith((ref) => engine),
+        mushafHeaderFontsProvider.overrideWith((ref) => false),
       ],
       child: const App(),
     ),
@@ -120,8 +137,6 @@ Future<void> _pump(
 }
 
 GoRouter _router(WidgetTester tester) {
-  // Pick any mounted element — the home title or the reader root, whichever
-  // is currently on screen.
   final candidates = <Finder>[
     find.byKey(HomePageKeys.title),
     find.byKey(ReaderScreenKeys.root),
@@ -132,38 +147,19 @@ GoRouter _router(WidgetTester tester) {
   throw StateError('no router-bearing element on screen');
 }
 
-/// Pumps until [until] matches at least one widget, or [budget] elapses.
-///
-/// Replacement for `pumpAndSettle` in scenarios where a non-test-friendly
-/// future (e.g. QcfFontLoader hitting path_provider + Isolate.run) keeps the
-/// frame scheduler busy forever. Lets go_router's redirect pipeline tick
-/// without blocking on the font load.
-Future<void> _pumpUntilVisible(
-  WidgetTester tester,
-  Finder until, {
-  Duration budget = const Duration(seconds: 2),
-  Duration step = const Duration(milliseconds: 50),
-}) async {
-  final deadline = DateTime.now().add(budget);
-  while (DateTime.now().isBefore(deadline)) {
-    await tester.pump(step);
-    if (until.evaluate().isNotEmpty) return;
-  }
-}
-
 String _currentLocation(GoRouter router) {
   return router.routeInformationProvider.value.uri.toString();
 }
 
 void main() {
+  setUpAll(() async {
+    _demoEngine = await _openDemoEngine();
+  });
+
   testWidgets('/reader/page/1 opens ReaderScreen in page mode', (tester) async {
     await _pump(tester);
     _router(tester).go('/reader/page/1');
-    // Page mode triggers QcfFontLoader (path_provider + Isolate.run); both
-    // are unavailable under flutter_test, so pumpAndSettle would hang on the
-    // font load. We're verifying the route + screen wiring, not the
-    // package's font pipeline, so pump until the screen mounts.
-    await _pumpUntilVisible(tester, find.byKey(ReaderScreenKeys.root));
+    await tester.pumpAndSettle();
     expect(find.byKey(ReaderScreenKeys.root), findsOneWidget);
     expect(find.byKey(ReaderScreenKeys.pageMode), findsOneWidget);
     expect(find.byKey(ReaderScreenKeys.textMode), findsNothing);
@@ -181,31 +177,29 @@ void main() {
   });
 
   testWidgets(
-    '/reader/ayah/2/255 in page mode redirects to /reader/page/42 with anchor',
+    '/reader/ayah/2/3 in page mode redirects to /reader/page/2 with anchor',
     (tester) async {
       await _pump(tester, readerMode: ReaderMode.page);
       final router = _router(tester);
-      router.go('/reader/ayah/2/255');
-      // Same reason as above — page mode's font loader doesn't settle in
-      // widget-test env.
-      await _pumpUntilVisible(tester, find.byKey(ReaderScreenKeys.pageMode));
+      router.go('/reader/ayah/2/3');
+      await tester.pumpAndSettle();
       final loc = _currentLocation(router);
-      expect(loc, startsWith('/reader/page/42'));
-      expect(loc, contains('anchor=2:255'));
+      expect(loc, startsWith('/reader/page/2'));
+      expect(loc, contains('anchor=2:3'));
       expect(find.byKey(ReaderScreenKeys.pageMode), findsOneWidget);
     },
   );
 
   testWidgets(
-    '/reader/ayah/2/255 in text mode redirects to /reader/surah/2 with anchor',
+    '/reader/ayah/2/3 in text mode redirects to /reader/surah/2 with anchor',
     (tester) async {
       await _pump(tester, readerMode: ReaderMode.text);
       final router = _router(tester);
-      router.go('/reader/ayah/2/255');
+      router.go('/reader/ayah/2/3');
       await tester.pumpAndSettle();
       final loc = _currentLocation(router);
       expect(loc, startsWith('/reader/surah/2'));
-      expect(loc, contains('anchor=2:255'));
+      expect(loc, contains('anchor=2:3'));
       expect(find.byKey(ReaderScreenKeys.textMode), findsOneWidget);
     },
   );
@@ -279,7 +273,7 @@ void main() {
   });
 
   testWidgets(
-    'page-mode route auto-switches to text-mode + banner when locator is '
+    'page-mode route auto-switches to text-mode + banner when the engine is '
     'in fallback (graceful degrade)',
     (tester) async {
       await _pump(
@@ -300,7 +294,7 @@ void main() {
   );
 
   testWidgets(
-    'fallback locator + ayah deep link routes to text mode rather than /',
+    'fallback engine + ayah deep link routes to text mode rather than /',
     (tester) async {
       await _pump(
         tester,
@@ -310,8 +304,8 @@ void main() {
       final router = _router(tester);
       router.go('/reader/ayah/2/255');
       await tester.pumpAndSettle();
-      // Without locator data we cannot verify the ayah; trust the input
-      // syntactically and route to the surah (text-mode) view.
+      // Without QUL coordinates we cannot verify the ayah's page; trust the
+      // repository-validated input and route to the surah (text-mode) view.
       expect(_currentLocation(router), startsWith('/reader/surah/2'));
       expect(find.byKey(ReaderScreenKeys.textMode), findsOneWidget);
     },
@@ -323,7 +317,6 @@ void main() {
     await _pump(tester, readerMode: ReaderMode.text);
     expect(find.byKey(HomePageKeys.list), findsOneWidget);
 
-    // Tap the Al-Fatihah tile.
     await tester.tap(find.byKey(const ValueKey('home.surah_tile.1')));
     await tester.pumpAndSettle();
 

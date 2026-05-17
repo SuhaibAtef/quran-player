@@ -1,6 +1,6 @@
 /// Whether the reader presents the printed-mushaf page layout (page mode,
-/// via `qcf_quran_plus`) or a continuous text scroll sourced from
-/// `QuranRepository` (text mode).
+/// via the `tarteel_qul` mushaf engine) or a continuous text scroll sourced
+/// from `QuranRepository` (text mode).
 ///
 /// The string [storageKey] is what gets persisted to `SharedPreferences`.
 /// Persisting the enum *index* would silently re-map if a future change

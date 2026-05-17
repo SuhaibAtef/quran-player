@@ -22,7 +22,7 @@ The system SHALL provide a `tarteel_qul` Flutter package at `packages/tarteel_qu
 
 ### Requirement: The engine parses QUL layout and word data into typed page models
 
-The engine SHALL parse a QUL mushaf layout database (`info`, `pages` tables) and a QUL word-script database (`words` table) into typed models. For a given page it SHALL produce that page's lines in `line_number` order, each carrying its line type (`ayah`, `surah_name`, `basmallah`), its centered flag, and — for `ayah` lines — the ordered words obtained by joining the layout's `first_word_id..last_word_id` range against the word database.
+The engine SHALL parse a QUL mushaf layout database (a `pages` table) and a QUL word-script database (`words` table) into typed models. For a given page it SHALL produce that page's lines in `line_number` order, each carrying its line type (`ayah`, `surah_name`, `basmallah`), its centered flag, and — for `ayah` lines — the ordered words obtained by joining the layout's `first_word_id..last_word_id` range against the word database.
 
 #### Scenario: A page resolves to ordered typed lines
 
@@ -36,12 +36,12 @@ The engine SHALL parse a QUL mushaf layout database (`info`, `pages` tables) and
 
 ### Requirement: The engine reads layout dimensions from data, not hard-coded values
 
-The engine SHALL read page count and lines-per-page from the layout database's `info` table rather than hard-coding them, so it renders any QUL layout (V1, V2, V4, IndoPak, …) whose schema matches. The host application's choice of a specific layout SHALL NOT be encoded in the package.
+The engine SHALL derive page count and lines-per-page from the layout database's `pages` table (the maximum `page_number` and `line_number`) rather than hard-coding them, so it renders any QUL layout (V1, V2, V4, IndoPak, …) whose schema matches. The host application's choice of a specific layout SHALL NOT be encoded in the package.
 
-#### Scenario: Page count comes from the info table
+#### Scenario: Page count is derived from the pages table
 
 - **WHEN** the engine opens a layout database
-- **THEN** it uses `info.number_of_pages` and `info.lines_per_page` for bounds and rendering rather than constants
+- **THEN** it derives the page count and lines-per-page from the `pages` table's maximum `page_number` and `line_number` for bounds and rendering rather than constants
 
 ### Requirement: The engine validates layout data and fails structurally
 
@@ -49,7 +49,7 @@ When the supplied layout or word database is missing expected tables, has an une
 
 #### Scenario: Malformed layout database surfaces a structured failure
 
-- **WHEN** the engine is given a database that lacks the expected `info` or `pages` tables
+- **WHEN** the engine is given a database that lacks the expected `pages` or `words` tables
 - **THEN** it reports a structured failure the consumer can branch on
 - **AND** it does not throw an unhandled exception and does not render a partial page
 
@@ -112,3 +112,13 @@ The engine SHALL expose a coordinate API that maps between `AyahKey` and page nu
 
 - **WHEN** the page for an out-of-range ayah, or the first ayah of an out-of-range page, is requested
 - **THEN** the engine returns a structured failure and does not throw
+
+### Requirement: The engine renders a consumer-selected colour palette
+
+The engine SHALL render a page's glyphs in a consumer-selected `CPAL` colour palette of the per-page font, and SHALL render the font's default palette when none is selected. The engine SHALL apply the selection itself — the consumer supplies the same unmodified font bytes regardless of palette.
+
+#### Scenario: A page renders in the selected palette
+
+- **WHEN** `MushafView` renders a page whose font carries multiple `CPAL` palettes, with palette `N` selected
+- **THEN** the page's glyphs are drawn in palette `N`'s colours
+- **AND** selecting a different palette for the same page re-renders it in the other palette without the consumer changing the supplied font bytes

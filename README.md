@@ -71,11 +71,13 @@ lib/
   data/mcp/                    # host-side MCP adapters (HostQuranDataAdapter, HostAudioAdapter), DTOs, error mapper
   domain/quran/                # framework-free Quran contracts (Surah, Ayah, AyahKey, QuranSource, QuranRepository)
 packages/quran_mcp_server/     # workspace member: loopback MCP server (HTTP, mcp_dart, scope toggles, audit log). Flutter-free.
+packages/tarteel_qul/          # workspace member: QUL printed-mushaf rendering engine. Asset-agnostic, publishable.
 tool/
   build_quran_db.dart          # maintainer-only build tool (see "Building the Quran DB")
 assets/quran/
   quran.sqlite                 # bundled, byte-deterministic
   manifest.json                # source attribution + SHA-256 checksums
+assets/qul/                    # gitignored — contributor-downloaded QUL mushaf data (see Setup)
 ```
 
 User-writable storage: `path_provider.getApplicationSupportDirectory()/quran/user.db`. Schema v1 has only `audit_log`. The bundled `quran.sqlite` and `muyassar.sqlite` remain read-only and fail-closed; `user.db` is the only SQLite file that fails soft (Quran reads + audio playback continue if it's unavailable).
@@ -90,11 +92,37 @@ Conventions:
 
 ## Status
 
-Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the realigned local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (`qcf_quran_plus`) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer lives in the workspace package at [packages/quran_mcp_server/](packages/quran_mcp_server/) — loopback HTTP on `127.0.0.1` via `mcp_dart`, pre-granted Settings scopes for Mode B playback, and a persistent SQLite audit log under the OS Application Support directory with a 7-day prune. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
+Foundation, Quran data layer, mushaf reader, audio-player foundation, basic Quran search, tafsir data, and the realigned local MCP surface are in place. The Surahs page renders the real 114-surah list from a bundled, integrity-checked SQLite asset; tapping a surah opens the reader, which renders either a printed-mushaf page view (the in-repo `tarteel_qul` QUL rendering engine) or a continuous text scroll (from `QuranRepository`) — toggle in Settings. The player streams verse audio from the Quran.com / Quran Foundation public content API for one default reciter, exposes a bottom mini player with an expandable queue, and drives active-ayah highlighting in both reader modes. The Search page queries Arabic canonical Quran text through the bundled SQLite FTS index and opens results through the existing ayah reader route. The MCP layer lives in the workspace package at [packages/quran_mcp_server/](packages/quran_mcp_server/) — loopback HTTP on `127.0.0.1` via `mcp_dart`, pre-granted Settings scopes for Mode B playback, and a persistent SQLite audit log under the OS Application Support directory with a 7-day prune. Bookmarks land in a subsequent OpenSpec change against this foundation. Tracking lives in:
 
 - **Linear** — issues, cycles, roadmap.
 - **GitHub** — branches and pull requests. `develop` is the integration branch; `main` is release-only.
 - **OpenSpec** ([openspec/](openspec/)) — every non-trivial change starts with a proposal under [openspec/changes/](openspec/changes/).
+
+## Setup — download the QUL mushaf assets (required)
+
+The reader's page mode renders the printed mushaf from **Tarteel QUL** (Quran
+Universal Library) data. Those files are **not committed to this repository**
+(~70 MB of third-party fonts and databases) — `assets/qul/` is gitignored. **A
+fresh clone cannot `flutter build` or `flutter run` until the files below are
+in place**, because `pubspec.yaml` declares them as Flutter assets.
+
+Download the QPC V4 resources from [qul.tarteel.ai](https://qul.tarteel.ai/)
+and place them in an `assets/qul/` directory:
+
+| File | QUL resource |
+|---|---|
+| `assets/qul/qpc-v4-tajweed-15-lines.db` | QPC V4 — 15-line mushaf page layout |
+| `assets/qul/qpc-v4.db` | QPC V4 — word-by-word glyph script |
+| `assets/qul/ttf.zip` | QPC V4 — per-page fonts (604 `pN.ttf` files) |
+| `assets/qul/surah_headers/QCF_SurahHeader_COLOR-Regular.ttf` | QUL ornamental surah-header colour font |
+| `assets/qul/juz_name_font/quran-common.ttf` | QUL `quran-common` font (bismillah glyph) |
+
+QUL exports the databases and header fonts inside `.zip` archives — unzip
+those so the bare `.db` / `.ttf` files sit at the paths above. Keep `ttf.zip`
+as a zip (the app unzips per-page fonts on demand). End users download
+nothing: a published build already bundles these inside the app binary. If the
+files are missing or invalid at runtime the reader degrades to text mode — it
+never fails closed.
 
 ## Development workflow
 
@@ -123,7 +151,7 @@ Quran Companion bundles only verified, attributed text. Full credits live in [TH
 - **Text:** **Tanzil's Uthmani plain text** (114 surahs, 6,236 ayahs), distributed under the [Tanzil Quran Text License](https://tanzil.net/docs/tanzil_license) — verbatim redistribution + attribution required, modification forbidden. The bundled SQLite asset is byte-deterministic and integrity-checked at every launch; if the check fails, the app refuses to render Quran data.
 - **Tafsir:** **al-Muyassar** by the [King Fahd Complex for the Printing of the Holy Quran](https://qurancomplex.gov.sa/) (6,236 ayah-level commentaries in Arabic). Free non-commercial redistribution with attribution; no modification. Fetched at maintainer build time from the MIT-licensed [`spa5k/tafsir_api`](https://github.com/spa5k/tafsir_api) mirror at a pinned commit SHA recorded in [tool/build_tafsir_db.dart](tool/build_tafsir_db.dart). Bundled as a separate SQLite asset with its own manifest and integrity check (including an orphan-ayah cross-check against the Quran DB). Data-only in this release — no UI consumer yet.
 - **Audio:** verse audio streams from the Quran.com / Quran Foundation public content API using ayah-by-ayah recitation id `9`, Mohamed Siddiq al-Minshawi. Runtime audio playback requires network access today. Surah queues are opened as a single preloaded playlist for smoother ayah-to-ayah playback. The player consumes resolved playable URIs through `AudioRepository`, so a future download manager can replace remote URLs with local cached files without changing player UI.
-- **Mushaf rendering:** [`qcf_quran_plus`](https://pub.dev/packages/qcf_quran_plus) (MIT) supplies QCF (King Fahd Glorious Qur'an Complex) glyph fonts and the standard 604-page Madani mushaf metadata used by the reader's page mode. **Layout and glyphs only** — canonical text always comes from Tanzil above. The QCF font license status and attribution are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- **Mushaf rendering:** the reader's page mode renders **Tarteel QUL** (Quran Universal Library) QPC V4 data — page layout, word-by-word glyph script, and KFGQPC per-page fonts — through the in-repo [`tarteel_qul`](packages/tarteel_qul/) rendering engine. **Layout and glyphs only** — canonical text always comes from Tanzil above. The QUL files are a contributor download (see [Setup](#setup--download-the-qul-mushaf-assets-required)), bundled into the app binary; the `tarteel_qul` package itself ships no QUL data. License status and attribution are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Search limitations
 

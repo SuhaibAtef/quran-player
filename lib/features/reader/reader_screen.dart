@@ -17,6 +17,7 @@ class ReaderScreenKeys {
   static const root = Key('reader.screen');
   static const titleLabel = Key('reader.screen.title');
   static const back = Key('reader.screen.back');
+  static const loading = Key('reader.screen.loading');
   static const fallbackBanner = Key('reader.screen.fallback_banner');
   static const pageMode = Key('reader.screen.mode.page');
   static const textMode = Key('reader.screen.mode.text');
@@ -54,6 +55,9 @@ class ReaderScreen extends ConsumerStatefulWidget {
 
 class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   late int _currentPage;
+
+  /// Set when the QUL engine reports a render failure mid-session. Degrades
+  /// page mode to text for this screen without writing the user's preference.
   bool _pageRenderUnavailable = false;
 
   @override
@@ -65,14 +69,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final locatorStatus = ref.watch(mushafLocatorProvider);
     final target = widget.target;
-
-    final useTextMode =
-        target is SurahReaderTarget ||
-        (target is PageReaderTarget &&
-            (locatorStatus.usingFallback || _pageRenderUnavailable));
-
     return FScaffold(
       key: ReaderScreenKeys.root,
       header: FHeader.nested(
@@ -91,61 +88,90 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          if (target is PageReaderTarget &&
-              (locatorStatus.usingFallback || _pageRenderUnavailable))
-            const _FallbackBanner(),
-          Expanded(
-            child: useTextMode
-                ? KeyedSubtree(
-                    key: ReaderScreenKeys.textMode,
-                    child: TextReaderView(
-                      surahNumber: _surahForTextMode(
-                        target: target,
-                        locator: locatorStatus.locator,
-                      ),
-                      anchor: target.anchor,
-                    ),
-                  )
-                : KeyedSubtree(
-                    key: ReaderScreenKeys.pageMode,
-                    child: PageMushafView(
-                      initialPage: resolveAnchorPage(
-                        locator: locatorStatus.locator,
-                        initialPage: (target as PageReaderTarget).pageNumber,
-                        anchor: target.anchor,
-                      ),
-                      onPageChanged: (page) =>
-                          setState(() => _currentPage = page),
-                      onRenderUnavailable: () {
-                        if (!_pageRenderUnavailable && mounted) {
-                          setState(() => _pageRenderUnavailable = true);
-                        }
-                      },
-                    ),
-                  ),
+      child: switch (target) {
+        SurahReaderTarget() => KeyedSubtree(
+          key: ReaderScreenKeys.textMode,
+          child: TextReaderView(
+            surahNumber: target.surahNumber,
+            anchor: target.anchor,
           ),
-        ],
+        ),
+        PageReaderTarget() => _buildPageReader(target),
+      },
+    );
+  }
+
+  Widget _buildPageReader(PageReaderTarget target) {
+    final engineAsync = ref.watch(mushafEngineProvider);
+    return engineAsync.when(
+      loading: () => const Center(
+        key: ReaderScreenKeys.loading,
+        child: SizedBox(
+          width: 240,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FProgress(),
+              SizedBox(height: 12),
+              Text('Preparing the mushaf…'),
+            ],
+          ),
+        ),
       ),
+      // openMushafEngine never throws, so this branch is defensive only.
+      error: (_, _) => _textFallback(target, surahFallback: 1),
+      data: (engine) {
+        if (engine.usingFallback || _pageRenderUnavailable) {
+          return _textFallback(
+            target,
+            surahFallback: _surahForPage(engine.locator, target.pageNumber),
+          );
+        }
+        return KeyedSubtree(
+          key: ReaderScreenKeys.pageMode,
+          child: PageMushafView(
+            engine: engine,
+            initialPage: resolveAnchorPage(
+              locator: engine.locator,
+              initialPage: target.pageNumber,
+              anchor: target.anchor,
+            ),
+            onPageChanged: (page) => setState(() => _currentPage = page),
+            onRenderUnavailable: () {
+              if (!_pageRenderUnavailable && mounted) {
+                setState(() => _pageRenderUnavailable = true);
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _textFallback(PageReaderTarget target, {required int surahFallback}) {
+    return Column(
+      children: [
+        const _FallbackBanner(),
+        Expanded(
+          child: KeyedSubtree(
+            key: ReaderScreenKeys.textMode,
+            child: TextReaderView(
+              surahNumber: surahFallback,
+              anchor: target.anchor,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-int _surahForTextMode({
-  required ReaderTarget target,
-  required MushafLocator locator,
-}) {
-  if (target is SurahReaderTarget) return target.surahNumber;
-  if (target is PageReaderTarget) {
-    // Page mode requested but we're degrading — try to land the user on the
-    // surah that opens this page; if the locator can't tell us (it's a
-    // fallback locator), default to Al-Fatihah.
-    final first = locator.firstAyahOnPage(target.pageNumber);
-    if (first is Ok<AyahKey>) return first.value.surah;
-    return 1;
-  }
-  return 1;
+/// Resolves which surah opens [pageNumber] so a degrade-to-text fallback lands
+/// the user on roughly the right place. Defaults to Al-Fatihah if the locator
+/// cannot tell us (a text-only fallback locator).
+int _surahForPage(MushafLocator locator, int pageNumber) {
+  final first = locator.firstAyahOnPage(pageNumber);
+  return first is Ok<AyahKey> ? first.value.surah : 1;
 }
 
 class _ReaderTitle extends ConsumerWidget {

@@ -5,17 +5,17 @@ TBD - created by archiving change mushaf-reader. Update Purpose after archive.
 ## Requirements
 ### Requirement: Reader exposes page and text render modes
 
-The application SHALL provide a Quran reader feature with two render modes: a page-based mushaf view that renders the printed-mushaf layout via `qcf_quran_plus`, and a continuous text view that renders ayahs surah-at-a-time straight from `QuranRepository`. Exactly one mode is active at any time, controlled by a user-visible setting.
+The application SHALL provide a Quran reader feature with two render modes: a page-based mushaf view that renders the printed-mushaf layout via the `tarteel_qul` mushaf engine, and a continuous text view that renders ayahs surah-at-a-time straight from `QuranRepository`. Exactly one mode is active at any time, controlled by a user-visible setting.
 
 #### Scenario: Default mode is page
 
 - **WHEN** the reader is opened on a fresh install with no persisted preference
-- **THEN** it renders in page mode using the `qcf_quran_plus` page renderer
+- **THEN** it renders in page mode using the `tarteel_qul` mushaf engine
 
 #### Scenario: User-selected mode is honored
 
 - **WHEN** the user has selected text mode in Settings and opens the reader
-- **THEN** it renders in text mode using `QuranRepository`-supplied ayahs, with no `qcf_quran_plus` widget in the tree
+- **THEN** it renders in text mode using `QuranRepository`-supplied ayahs, with no `tarteel_qul` `MushafView` widget in the tree
 
 #### Scenario: Modes do not share rendering paths
 
@@ -24,17 +24,17 @@ The application SHALL provide a Quran reader feature with two render modes: a pa
 
 ### Requirement: Quran text always originates in QuranRepository
 
-The reader feature MUST source all Quran *text* (anything user-actionable, including ayah resolution, copy, top-bar labels, and text-mode rendering) from the `QuranRepository` defined by the `quran-data` capability. The `qcf_quran_plus` package supplies layout and glyphs for page mode only and MUST NOT be treated as a second source of canonical text.
+The reader feature MUST source all Quran *text* (anything user-actionable, including ayah resolution, copy, top-bar labels, and text-mode rendering) from the `QuranRepository` defined by the `quran-data` capability. The `tarteel_qul` mushaf engine supplies layout and glyphs for page mode only and MUST NOT be treated as a second source of canonical text.
 
 #### Scenario: Page-mode user actions resolve through the repository
 
 - **WHEN** a user action in page mode requires the textual content of an ayah
-- **THEN** the feature obtains the text via `QuranRepository.getAyah(...)` rather than reading glyph data from `qcf_quran_plus`
+- **THEN** the feature obtains the text via `QuranRepository.getAyah(...)` rather than reading glyph data from the `tarteel_qul` engine
 
 #### Scenario: Text mode reads only the repository
 
 - **WHEN** text mode renders a surah
-- **THEN** all visible ayah text comes from `QuranRepository.getSurahAyahs(...)` and no import from `qcf_quran_plus` appears in the text-mode widget tree
+- **THEN** all visible ayah text comes from `QuranRepository.getSurahAyahs(...)` and no import from `tarteel_qul` appears in the text-mode widget tree
 
 ### Requirement: Reader is addressable by route
 
@@ -107,12 +107,12 @@ Tapping a tile in the Surahs list SHALL open the reader at the first ayah of tha
 
 ### Requirement: MushafLocator seam decouples rendering from features
 
-The system SHALL define a framework-free `MushafLocator` contract under `lib/domain/quran/` that maps `AyahKey ↔ pageNumber` for the standard 604-page printed mushaf. The contract MUST be implemented by `QcfMushafLocator` in `lib/data/quran/`. `qcf_quran_plus` MUST be imported by no more than two files: the locator implementation (coordinate translation) and the page-mode reader widget (rendering). Future audio, search, bookmark, and MCP changes MUST be able to drive the reader to a position by depending on `MushafLocator` without importing `qcf_quran_plus`.
+The system SHALL define a framework-free `MushafLocator` contract under `lib/domain/quran/` that maps `AyahKey ↔ pageNumber` for the standard 604-page printed mushaf. The contract MUST be implemented by `QulMushafLocator` in `lib/data/quran/`, backed by the `tarteel_qul` engine's layout data. `package:tarteel_qul/` MUST be imported by no more than two host-app areas: the `MushafLocator` implementation (coordinate translation) and the page-mode reader widget (rendering). Future audio, search, bookmark, and MCP changes MUST be able to drive the reader to a position by depending on `MushafLocator` without importing `tarteel_qul`.
 
 #### Scenario: Domain layer does not import the rendering package
 
 - **WHEN** the `lib/domain/quran/` directory is compiled in isolation
-- **THEN** no import resolves to `package:qcf_quran_plus/`, `package:flutter/`, `package:flutter_riverpod/`, or any storage package
+- **THEN** no import resolves to `package:tarteel_qul/`, `package:flutter/`, `package:flutter_riverpod/`, or any storage package
 
 #### Scenario: Locator round-trip for a known ayah
 
@@ -155,11 +155,11 @@ The application SHALL persist the user's reader-mode selection in `SharedPrefere
 
 ### Requirement: Reader degrades gracefully when rendering is unavailable
 
-If `qcf_quran_plus` cannot be initialized at runtime (font load failure, missing assets, locator initialization throws, or the locator smoke test fails), the reader SHALL switch the runtime view to text mode for the current session, surface a non-fatal banner, and leave the user's persisted preference unchanged. The data-integrity fatal error screen MUST NOT be triggered by a rendering-package failure.
+If the `tarteel_qul` mushaf engine cannot render at runtime — the bundled QUL assets are missing, a QUL database fails structural validation, a page font fails to load, or the locator smoke test fails — the reader SHALL switch the runtime view to text mode for the current session, surface a non-fatal banner, and leave the user's persisted preference unchanged. The data-integrity fatal error screen MUST NOT be triggered by a mushaf-rendering failure.
 
-#### Scenario: Page mode auto-switches to text on init failure
+#### Scenario: Page mode auto-switches to text on render failure
 
-- **WHEN** the page-mode reader is opened and locator initialization returns a failure
+- **WHEN** the page-mode reader is opened and the `tarteel_qul` engine reports the QUL assets are missing or invalid
 - **THEN** the reader renders text mode for that screen, displays a banner explaining the degrade, and the persisted preference remains `"page"`
 
 #### Scenario: Persisted preference survives a session-level fallback
@@ -169,22 +169,8 @@ If `qcf_quran_plus` cannot be initialized at runtime (font load failure, missing
 
 #### Scenario: Rendering failure is not a data-integrity failure
 
-- **WHEN** `qcf_quran_plus` fails to initialize but `QuranRepository` is healthy
+- **WHEN** the `tarteel_qul` engine fails to render but `QuranRepository` is healthy
 - **THEN** the data-integrity fatal error screen is not shown, and `QuranRepository` calls continue to succeed
-
-### Requirement: QCF source attribution surfaces in Settings
-
-The application SHALL credit `qcf_quran_plus` and the QCF (King Fahd Complex) glyph fonts in the Settings page alongside the existing Tanzil attribution row, and MUST record the package and font license terms in `THIRD_PARTY_NOTICES.md`. Attribution wording MUST follow the package's and the fonts' license requirements.
-
-#### Scenario: QCF row appears in Settings
-
-- **WHEN** the user navigates to the Settings page
-- **THEN** a row credits `qcf_quran_plus` (with version) and the QCF glyph fonts, separately from the Tanzil source row
-
-#### Scenario: Attribution is recorded in THIRD_PARTY_NOTICES.md
-
-- **WHEN** the change ships
-- **THEN** `THIRD_PARTY_NOTICES.md` contains an entry for `qcf_quran_plus` and the QCF font license, with the upstream package URL and the license summary
 
 ### Requirement: Reader does not introduce top-level navigation
 
@@ -194,4 +180,63 @@ The reader SHALL be reachable only as a drill-down (from the Surahs list, from a
 
 - **WHEN** the app shell is rendered
 - **THEN** the set of top-level destinations is the same as before this change (no Reader entry)
+
+### Requirement: QUL mushaf attribution surfaces in Settings
+
+The application SHALL credit the Tarteel QUL (Quran Universal Library) mushaf layout, word-script data, and KFGQPC fonts that page mode renders, in the Settings page alongside the existing Tanzil attribution row, and MUST record those resources and their license terms in `THIRD_PARTY_NOTICES.md`. Because Quran Companion bundles the QUL fonts into its built binary, the notice MUST reflect that the application redistributes them; the `tarteel_qul` package itself bundles and redistributes nothing.
+
+#### Scenario: QUL mushaf row appears in Settings
+
+- **WHEN** the user navigates to the Settings page
+- **THEN** a row credits the QUL mushaf layout / word-script / KFGQPC fonts used by page mode, separately from the Tanzil source row
+
+#### Scenario: Attribution is recorded in THIRD_PARTY_NOTICES.md
+
+- **WHEN** the change ships
+- **THEN** `THIRD_PARTY_NOTICES.md` contains an entry for the QUL mushaf resources and the KFGQPC font license, noting that the application binary redistributes the fonts
+- **AND** the previous `qcf_quran_plus` entry is removed
+
+### Requirement: Page mode is legible under light and dark themes
+
+The reader's page mode SHALL render the mushaf legibly under both the light and the dark application theme. Under the light theme it SHALL render on a light page with a dark-text colour palette; under the dark theme it SHALL render on a dark page with a light-text colour palette. A theme change MUST NOT leave the mushaf text unreadable against its page.
+
+#### Scenario: Dark theme renders a legible page
+
+- **WHEN** the reader is opened in page mode under the dark application theme
+- **THEN** the mushaf page is rendered on a dark page surface with a light-text palette, so the glyphs are legible
+
+#### Scenario: Light theme renders a legible page
+
+- **WHEN** the reader is opened in page mode under the light application theme
+- **THEN** the mushaf page is rendered on a light page surface with a dark-text palette
+
+### Requirement: A mushaf colour style is user-selectable
+
+The application SHALL provide a Settings control that lets the user choose a mushaf colour style. It SHALL offer every colour palette the QUL per-page fonts carry — tajweed-coloured and plain (mono) variants, including dark-page variants — as selectable styles, not only a tajweed/plain pair. The control SHALL show a live preview that renders a real mushaf verse in the selected style. The selected style SHALL be persisted and applied to page mode, independent of the application's light/dark theme. This requirement replaces the former `qcf`-era tajweed toggle.
+
+#### Scenario: Colour-style picker appears in Settings with a real-verse preview
+
+- **WHEN** the user navigates to the Settings page
+- **THEN** a mushaf colour-style control offers every QUL colour palette as a selectable style
+- **AND** it shows a preview rendering a real mushaf verse (Sūrat al-Fātiḥah) in the selected style
+
+#### Scenario: Selected style persists and applies
+
+- **WHEN** the user selects a colour style and reopens the reader in page mode
+- **THEN** page mode renders in the selected style
+- **AND** the selection survives an app restart
+
+### Requirement: Surah headers and basmala render as ornamental glyphs
+
+The reader's page mode SHALL render `surah_name` lines using the QUL ornamental surah-header colour font and `basmallah` lines using the QUL bismillah glyph, rather than plain placeholders. The surah *name text* a user reads or copies MUST still originate in `QuranRepository`.
+
+#### Scenario: A surah header renders ornamentally
+
+- **WHEN** page mode renders a `surah_name` line
+- **THEN** the line shows the ornamental QUL surah-header glyph for that surah, not a plain text or placeholder band
+
+#### Scenario: A basmala line renders the bismillah glyph
+
+- **WHEN** page mode renders a `basmallah` line
+- **THEN** the line shows the QUL bismillah glyph
 

@@ -10,6 +10,8 @@ import 'package:quran_player/app/state/theme_mode_provider.dart';
 import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/quran/integrity_checker.dart';
 import 'package:quran_player/data/quran/manifest.dart';
+import 'package:quran_player/data/quran/mushaf_engine.dart';
+import 'package:quran_player/data/quran/mushaf_locator_provider.dart';
 import 'package:quran_player/data/quran/providers.dart';
 import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/quran_source.dart';
@@ -65,6 +67,11 @@ Future<void> _pump(WidgetTester tester) async {
           (ref) async => Result.ok(fakeTafsirBootstrap()),
         ),
         quranRepositoryProvider.overrideWithValue(repo),
+        // The colour-style preview embeds the QUL engine; override it so the
+        // Settings test renders the preview placeholder, not the real engine.
+        mushafEngineProvider.overrideWith(
+          (ref) => const MushafEngine.unavailable(),
+        ),
       ],
       child: const App(),
     ),
@@ -96,6 +103,8 @@ void main() {
   testWidgets('Settings renders tafsir source attribution', (tester) async {
     await _pump(tester);
 
+    // Every section is mounted (SingleChildScrollView + Column), so an
+    // off-screen section is still findable without scrolling.
     expect(find.byKey(SettingsPageKeys.tafsirSection), findsOneWidget);
     expect(find.byKey(SettingsPageKeys.tafsirName), findsOneWidget);
     // Fixture comes from fakeTafsirBootstrap()'s default TafsirSource:
@@ -106,25 +115,12 @@ void main() {
     expect(find.byKey(SettingsPageKeys.tafsirUrl), findsOneWidget);
   });
 
-  testWidgets('Settings renders the QCF mushaf attribution', (tester) async {
+  testWidgets('Settings renders the QUL mushaf attribution', (tester) async {
     await _pump(tester);
 
-    // The QCF section lives at the bottom of the Settings ListView; scroll it
-    // into the viewport before asserting on it (otherwise the lazy list has
-    // not built it yet).
-    final scrollable = find.descendant(
-      of: find.byKey(SettingsPageKeys.list),
-      matching: find.byType(Scrollable),
-    );
-    await tester.scrollUntilVisible(
-      find.byKey(SettingsPageKeys.qcfSection),
-      400,
-      scrollable: scrollable,
-    );
-
-    expect(find.byKey(SettingsPageKeys.qcfSection), findsOneWidget);
-    expect(find.text('qcf_quran_plus'), findsOneWidget);
-    expect(find.textContaining('0.0.8'), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.mushafSection), findsOneWidget);
+    expect(find.text('Tarteel QUL — QPC V4'), findsOneWidget);
+    expect(find.textContaining('KFGQPC'), findsOneWidget);
   });
 
   testWidgets('Reader section toggles the mode and persists to prefs', (
@@ -147,21 +143,37 @@ void main() {
     expect(prefs.getString('reader.mode'), 'page');
   });
 
-  testWidgets('Tajweed switch defaults off and persists when toggled', (
+  testWidgets('Mushaf colour scheme shows a preview and persists the choice', (
     tester,
   ) async {
     await _pump(tester);
 
-    expect(find.byKey(SettingsPageKeys.readerTajweedSwitch), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.appearanceSection), findsOneWidget);
+    expect(find.byKey(SettingsPageKeys.appearancePreview), findsOneWidget);
+    expect(
+      find.byKey(SettingsPageKeys.appearanceOption('tajweed')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(SettingsPageKeys.appearanceOption('plain')),
+      findsOneWidget,
+    );
+
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('reader.tajweed_enabled'), isNull);
+    expect(prefs.getString('mushaf.color_scheme'), isNull);
 
-    await tester.tap(find.byKey(SettingsPageKeys.readerTajweedSwitch));
+    final plain = find.byKey(SettingsPageKeys.appearanceOption('plain'));
+    await tester.ensureVisible(plain);
     await tester.pumpAndSettle();
-    expect(prefs.getBool('reader.tajweed_enabled'), isTrue);
+    await tester.tap(plain);
+    await tester.pumpAndSettle();
+    expect(prefs.getString('mushaf.color_scheme'), 'plain');
 
-    await tester.tap(find.byKey(SettingsPageKeys.readerTajweedSwitch));
+    final tajweed = find.byKey(SettingsPageKeys.appearanceOption('tajweed'));
+    await tester.ensureVisible(tajweed);
     await tester.pumpAndSettle();
-    expect(prefs.getBool('reader.tajweed_enabled'), isFalse);
+    await tester.tap(tajweed);
+    await tester.pumpAndSettle();
+    expect(prefs.getString('mushaf.color_scheme'), 'tajweed');
   });
 }

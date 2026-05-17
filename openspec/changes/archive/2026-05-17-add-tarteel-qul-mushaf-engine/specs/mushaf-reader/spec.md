@@ -98,6 +98,50 @@ The application SHALL credit the Tarteel QUL (Quran Universal Library) mushaf la
 - **THEN** `THIRD_PARTY_NOTICES.md` contains an entry for the QUL mushaf resources and the KFGQPC font license, noting that the application binary redistributes the fonts
 - **AND** the previous `qcf_quran_plus` entry is removed
 
+### Requirement: Page mode is legible under light and dark themes
+
+The reader's page mode SHALL render the mushaf legibly under both the light and the dark application theme. Under the light theme it SHALL render on a light page with a dark-text colour palette; under the dark theme it SHALL render on a dark page with a light-text colour palette. A theme change MUST NOT leave the mushaf text unreadable against its page.
+
+#### Scenario: Dark theme renders a legible page
+
+- **WHEN** the reader is opened in page mode under the dark application theme
+- **THEN** the mushaf page is rendered on a dark page surface with a light-text palette, so the glyphs are legible
+
+#### Scenario: Light theme renders a legible page
+
+- **WHEN** the reader is opened in page mode under the light application theme
+- **THEN** the mushaf page is rendered on a light page surface with a dark-text palette
+
+### Requirement: A mushaf colour style is user-selectable
+
+The application SHALL provide a Settings control that lets the user choose a mushaf colour style. It SHALL offer every colour palette the QUL per-page fonts carry — tajweed-coloured and plain (mono) variants, including dark-page variants — as selectable styles, not only a tajweed/plain pair. The control SHALL show a live preview that renders a real mushaf verse in the selected style. The selected style SHALL be persisted and applied to page mode, independent of the application's light/dark theme. This requirement replaces the former `qcf`-era tajweed toggle.
+
+#### Scenario: Colour-style picker appears in Settings with a real-verse preview
+
+- **WHEN** the user navigates to the Settings page
+- **THEN** a mushaf colour-style control offers every QUL colour palette as a selectable style
+- **AND** it shows a preview rendering a real mushaf verse (Sūrat al-Fātiḥah) in the selected style
+
+#### Scenario: Selected style persists and applies
+
+- **WHEN** the user selects a colour style and reopens the reader in page mode
+- **THEN** page mode renders in the selected style
+- **AND** the selection survives an app restart
+
+### Requirement: Surah headers and basmala render as ornamental glyphs
+
+The reader's page mode SHALL render `surah_name` lines using the QUL ornamental surah-header colour font and `basmallah` lines using the QUL bismillah glyph, rather than plain placeholders. The surah *name text* a user reads or copies MUST still originate in `QuranRepository`.
+
+#### Scenario: A surah header renders ornamentally
+
+- **WHEN** page mode renders a `surah_name` line
+- **THEN** the line shows the ornamental QUL surah-header glyph for that surah, not a plain text or placeholder band
+
+#### Scenario: A basmala line renders the bismillah glyph
+
+- **WHEN** page mode renders a `basmallah` line
+- **THEN** the line shows the QUL bismillah glyph
+
 ## REMOVED Requirements
 
 ### Requirement: QCF source attribution surfaces in Settings

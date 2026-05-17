@@ -2,18 +2,21 @@
 
 The reader's page mode currently renders through `qcf_quran_plus` — turnkey but sealed: it owns the layout, the fonts, and the rendering, and the app only hands it a page number. The framework-free `MushafLocator` seam abstracts the *coordinate* side (`AyahKey ↔ page`), but the actual rendering widget ([lib/features/reader/widgets/page_mushaf_view.dart](lib/features/reader/widgets/page_mushaf_view.dart)) imports `qcf` directly.
 
-Tarteel QUL distributes mushaf rendering as open data. Inspecting the actual downloaded QPC V4 files confirmed the model:
+Tarteel QUL distributes mushaf rendering as open data. Inspecting the actual downloaded QPC V4 files (spike, task 1) confirmed the model:
 
 ```
-  qpc-v4-tajweed-15-lines.db   info(name, number_of_pages, lines_per_page, font_name)
-  (layout, 241 KB SQLite)      pages(page_number, line_number, line_type,
-                                     is_centered, first_word_id, last_word_id,
+  qpc-v4-tajweed-15-lines.db   pages(page_number, line_number, line_type,
+  (layout, 241 KB SQLite)            is_centered, first_word_id, last_word_id,
                                      surah_number)
                                line_type ∈ { ayah, surah_name, basmallah }
+                               — only ONE table; no `info` table (see spike).
+                               number_of_pages / lines_per_page are derived
+                               from MAX(page_number) / MAX(line_number).
 
   qpc-v4.db                    words(id, location, surah, ayah, word, text)
-  (word script, ~1 MB SQLite)  text = the glyph-code string for that word
-                               layout.first_word_id/last_word_id → words.id
+  (word script, 2.4 MB SQLite) text = the glyph-code string for that word
+                               (1–3 codepoints); layout.first_word_id /
+                               last_word_id → words.id
 
   ttf.zip                      p1.ttf .. p604.ttf  — one font per page,
   (604 fonts, 167 MB unzipped) glyphs pre-shaped/pre-justified for that page
@@ -63,7 +66,7 @@ The consumer decides where bytes come from (Flutter assets, filesystem, network)
 
 ### D2: Layout-agnostic engine; the app wires V4
 
-The QUL SQLite schema (`info` + `pages` + `words`) is uniform across V1/V2/V4/IndoPak layouts. The package codes against that schema, not against V4 specifically — `info.number_of_pages` / `info.lines_per_page` are read at runtime, not hard-coded. Quran Companion supplies the QPC V4 15-line files; that is the app's choice, not the package's.
+The QUL SQLite schema (a `pages` layout table + a `words` table) is uniform across V1/V2/V4/IndoPak layouts. The package codes against that schema, not against V4 specifically — page count and lines-per-page are derived at runtime from the `pages` table (`MAX(page_number)` / `MAX(line_number)`), not hard-coded. (The spike confirmed the QPC V4 layout DB carries **no `info` table** — design assumed one; dimensions are derived from `pages` instead.) Quran Companion supplies the QPC V4 15-line files; that is the app's choice, not the package's.
 
 **Why:** near-zero extra cost, and it keeps the package genuinely reusable. **Risk:** WIP QUL layouts may have schema drift — the package validates the schema on open and surfaces a structured failure rather than rendering garbage.
 
@@ -145,7 +148,100 @@ Rollback: revert the PR — `qcf_quran_plus` returns. `assets/qul/` is gitignore
 
 ## Open Questions
 
-- Does QPC V4's per-page font fill a line at an arbitrary render width, or only at one design size? (Spike — step 2.)
-- Is QPC V4 tajweed colour intrinsic to the font, and is there a non-tajweed V4 variant? (Confirm during apply — D8.)
-- Should the host build `QulMushafLocator` directly from `MushafLayoutRepository`, or should `tarteel_qul` expose a dedicated coordinate API the host adapts? (Decide during apply — D4; pick the lighter wiring.)
-- Does `tarteel_qul`'s `example/` use a checked-in tiny fake asset source, or a documented "drop QUL files here" path? (A fake source keeps the example runnable without downloads — preferred.)
+All four questions are **resolved** — by the task-1 spike (data inspection of the
+downloaded QPC V4 files) and by apply-phase decisions.
+
+- **Justification — RESOLVED (trust the font).** The layout DB carries only
+  word-id ranges (`first_word_id..last_word_id`) and an `is_centered` flag — it
+  carries **no per-word geometry** (no x-coordinates, no stretch factors). An
+  explicit space-distribution renderer would need geometry the DB does not
+  provide; the schema is only renderable if the per-page font itself
+  pre-justifies non-centered lines so a line's glyph run fills the text-block
+  width at the font's natural metrics. The engine therefore renders each line's
+  glyph run in `pN.ttf` and scales the whole page uniformly — design.md needs no
+  explicit-space-distribution revision. Final visual confirmation lands at the
+  manual task 9.3 / 9.5 check.
+- **Tajweed colour — RESOLVED (intrinsic).** Every inspected page font
+  (`p1.ttf`, `p100.ttf`, `p604.ttf`) ships `COLR` + `CPAL` tables — they are
+  layered colour fonts, so tajweed colouring is intrinsic to the glyphs. The
+  download contains no plain (non-tajweed) V4 variant. Per D8's worst case:
+  MVP renders tajweed always-on and the Settings tajweed toggle no longer feeds
+  page mode; finalizing the toggle is a follow-up, not part of this change.
+- **`QulMushafLocator` wiring — RESOLVED.** The `mushaf-engine` spec already
+  requires the engine to expose a page↔ayah coordinate API; `QulMushafLocator`
+  is a thin host adapter over that API (the lighter wiring per D4).
+- **`example/` asset source — RESOLVED.** The package `example/` uses a
+  checked-in tiny fake/fixture `MushafAssetSource` (task 4.6) so it runs without
+  a QUL download.
+
+### Spike findings (task 1, recorded)
+
+- **Layout DB has no `info` table.** Only a `pages` table
+  (`page_number, line_number, line_type, is_centered, first_word_id,
+  last_word_id, surah_number`), 9046 rows. `number_of_pages` = `MAX(page_number)`
+  = 604; `lines_per_page` = `MAX(line_number)` = 15. There is no `font_name`
+  column anywhere — irrelevant, since the engine uses per-page fonts. The
+  `mushaf-engine` spec's "reads dimensions from the `info` table" wording is
+  corrected to "derives dimensions from the `pages` table."
+- **Word join verified.** A `pages` row's `first_word_id..last_word_id` range
+  against `words.id` yields exactly the expected words for that line, with
+  `surah`/`ayah` coordinates intact (e.g. page 1 line 2 → words 1..5 → ayah 1:1).
+- **Non-ayah line columns.** For `surah_name` / `basmallah` lines,
+  `first_word_id` / `last_word_id` are empty strings (not NULL); `surah_name`
+  lines carry `surah_number`, `basmallah` lines carry none. The models treat
+  these as optional.
+- **`words.text` width.** 1–3 codepoints per word (mostly 1) — the `MushafWord`
+  model stores `text` as a `String`, never a single code unit.
+
+### D9: Colour schemes via CPAL palette selection
+
+The QPC V4 per-page fonts are `COLR`/`CPAL` colour fonts carrying **6 palettes**
+(inspected during apply): palettes 0/2 are light-background tajweed (black base
+text + tajweed colours), 1 is dark-background tajweed (white base text), 3/5
+are light-background plain (mono black), 4 is dark-background plain (mono
+white). Flutter's text engine renders a colour font with **palette 0 only** —
+it exposes no runtime CPAL selection.
+
+The engine therefore selects a palette by **rewriting the font's `CPAL`** before
+registering it: the `CPAL` v0 `colorRecordIndices` array is a list of
+`uint16`s, one per palette; swapping index `0` with index `N` makes Flutter's
+"palette 0" render palette `N`. `FontCache` keys its registry by
+`(page, palette)` and registers each variant under a distinct family.
+`MushafView` takes a `palette` index.
+
+All six palettes are exposed to the user as selectable **colour styles**
+(`MushafColorScheme`) — `tajweed` (0), `tajweed-dark` (1), `tajweed-warm` (2),
+`plain` (3), `plain-dark` (4), `plain-soft` (5). Each style carries its
+palette index and a `darkPage` flag; the reader renders the per-page font in
+`style.palette` on a dark sheet (white-text palettes 1/4) or a light parchment
+(the others). The chosen style is a **persisted preference, independent of the
+app's light/dark theme** — the mushaf appearance is the user's explicit
+choice. The dark styles give a **true dark mushaf** (dark sheet, white-base
+glyphs). Settings exposes the picker with a **live preview that renders a real
+verse** — page 1 (Sūrat al-Fātiḥah, opening with āyah 1:1) through the actual
+`MushafView` in the selected style. This **supersedes** the `qcf`-era tajweed
+toggle (D8), which is removed.
+
+### D10: Header and basmala fonts; the Surahs list
+
+`surah_name` / `basmallah` lines carry no addressable glyphs in the layout, so
+`MushafView` takes a consumer `headerBuilder`. The host renders them from two
+further QUL font resources, bundled under `assets/qul/` like the page fonts:
+
+- **`QCF_SurahHeader_COLOR`** — a `COLR` colour font of ornamental surah
+  headers, addressed via its `ligatures.json` (`surah-1`..`surah-114` → a glyph
+  string). Used for the reader's `surah_name` lines. It carries the same
+  six-palette set as the page fonts; the host registers a light variant
+  (palette 0) and a `CPAL`-recoloured dark variant (palette 1).
+- **`quran-common`** — supplies the bismillah glyph (`ligatures.json`
+  `bismillah` → U+FDFD, rendered in this font), used for `basmallah` lines.
+
+The QUL **`QCF_FullSurah` "surah name" SVG font is not used**: Flutter cannot
+render OpenType-`SVG ` colour fonts, and the font ships no `GSUB` ligatures and
+no glyph map, so a surah cannot be reliably addressed without risking the wrong
+name. The Home Surahs list therefore keeps the plain Arabic surah name from
+`QuranRepository` — the ornamental surah-header font is a reader-page element,
+not a list element.
+
+The surah *name* a user reads still resolves through `QuranRepository` (D5);
+the header font supplies only the ornamental glyph.
