@@ -6,8 +6,8 @@ const int kMushafPageCount = 604;
 
 /// Maps between [AyahKey] coordinates and printed-mushaf page numbers.
 ///
-/// The reader uses this to navigate between page mode (driven by a printed
-/// mushaf renderer such as `qcf_quran_plus`) and text mode (driven by the
+/// The reader uses this to navigate between page mode (driven by the
+/// `tarteel_qul` mushaf engine) and text mode (driven by the
 /// `QuranRepository`). Future audio, search, bookmark, and MCP changes drive
 /// the reader to a position via this contract — they MUST NOT depend on the
 /// rendering package directly.

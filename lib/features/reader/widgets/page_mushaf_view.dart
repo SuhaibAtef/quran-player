@@ -1,106 +1,90 @@
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
-import 'package:flutter/material.dart'
-    show Colors, MaterialScrollBehavior, PageController;
+// One of exactly two host files permitted to import `package:tarteel_qul/`
+// (the other is `lib/data/quran/mushaf_engine.dart`). This widget is the
+// page-mode rendering surface; every other layer drives the printed-mushaf
+// coordinate system through the framework-free `MushafLocator` contract.
 import 'package:flutter/services.dart'
     show KeyDownEvent, KeyEvent, KeyRepeatEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
-import 'package:qcf_quran_plus/qcf_quran_plus.dart' as qcf;
+import 'package:tarteel_qul/tarteel_qul.dart' as qul;
 
-import '../../../app/state/tajweed_provider.dart';
+import '../../../app/state/mushaf_color_scheme.dart';
 import '../../../core/logging/logger.dart';
+import '../../../data/quran/mushaf_engine.dart';
+import '../../../data/quran/mushaf_fonts.dart';
 import '../../../domain/quran/ayah_key.dart';
 import '../../../domain/quran/mushaf_locator.dart';
 import '../../player/state/audio_player_controller.dart';
-
-typedef PageFontLoader = Future<void> Function(int page);
-typedef PagePreloader = Future<void> Function(int page, {int radius});
 
 class PageMushafViewKeys {
   const PageMushafViewKeys._();
 
   static const root = Key('reader.page_mushaf');
-  static const pageView = Key('reader.page_mushaf.page_view');
-  static const fontLoading = Key('reader.page_mushaf.font_loading');
   static const prevButton = Key('reader.page_mushaf.prev');
   static const nextButton = Key('reader.page_mushaf.next');
 }
 
-/// Wraps `qcf_quran_plus`'s [qcf.QuranPageView] with the project's RTL +
-/// theming wiring, plus the desktop affordances the package omits: mouse-drag
-/// scrolling, keyboard arrow navigation, and visible prev/next buttons.
+/// Mushaf "page" colours. Light theme renders a warm parchment with a
+/// dark-text palette; dark theme a dark sheet with a light-text palette — the
+/// glyphs stay legible either way.
+const Color _kLightPageColor = Color(0xFFFBF7EC);
+const Color _kDarkPageColor = Color(0xFF14110B);
+
+/// Renders the printed mushaf in page mode on top of the `tarteel_qul`
+/// engine's [qul.MushafView], adding the desktop affordances the engine leaves
+/// to the consumer — keyboard arrow navigation and visible prev/next buttons —
+/// and supplying the ornamental surah-header / basmala glyphs and the
+/// theme-resolved colour palette.
 ///
-/// **The package import here is intentional and load-bearing.** A test
-/// guards that no other lib/ file imports `qcf_quran_plus` directly; the rest
-/// of the app drives the printed-mushaf coordinate system through the
-/// framework-free [MushafLocator] contract.
+/// **The `package:tarteel_qul/` import here is intentional and load-bearing.**
+/// A test guards that no host file outside this widget and
+/// `lib/data/quran/mushaf_engine.dart` imports the rendering package directly.
 class PageMushafView extends ConsumerStatefulWidget {
-  PageMushafView({
+  const PageMushafView({
+    required this.engine,
     required this.initialPage,
     this.onPageChanged,
     this.onRenderUnavailable,
-    PageFontLoader? loadInitialFont,
-    PagePreloader? preloadPages,
     super.key,
-  }) : loadInitialFont = loadInitialFont ?? qcf.QcfFontLoader.ensureFontLoaded,
-       preloadPages = preloadPages ?? qcf.QcfFontLoader.preloadPages;
+  });
 
-  /// 1-based page number (1..604).
+  /// The opened QUL engine. Must be a non-fallback engine — `repository` and
+  /// `assetSource` are read directly.
+  final MushafEngine engine;
+
+  /// 1-based page number (1..604) to open on.
   final int initialPage;
 
-  /// Fires with the 1-based page number whenever the user swipes.
+  /// Fires with the 1-based page number whenever the visible page changes.
   final ValueChanged<int>? onPageChanged;
 
-  /// Fires when the visible page's QCF font cannot load. The parent reader
-  /// should degrade to text mode instead of rendering blank glyphs.
+  /// Fires when a page font cannot load. The parent reader should degrade to
+  /// text mode rather than render blank glyphs.
   final VoidCallback? onRenderUnavailable;
-
-  final PageFontLoader loadInitialFont;
-  final PagePreloader preloadPages;
 
   @override
   ConsumerState<PageMushafView> createState() => _PageMushafViewState();
 }
 
 class _PageMushafViewState extends ConsumerState<PageMushafView> {
-  /// Pages on each side of the current one to keep font-loaded. Two is enough
-  /// to cover a fast swipe — the package's loader caches loaded pages
-  /// statically across the process so re-entering the reader is instant.
-  static const int _preloadRadius = 2;
-
-  static const _animDuration = Duration(milliseconds: 220);
-  static const _animCurve = Curves.easeOutCubic;
-
-  late final PageController _controller = PageController(
-    initialPage: (widget.initialPage - 1).clamp(0, kMushafPageCount - 1),
+  late final qul.MushafController _controller = qul.MushafController(
+    pageCount: widget.engine.repository!.pageCount,
+    initialPage: widget.initialPage,
   );
   final FocusNode _focusNode = FocusNode(debugLabel: 'PageMushafView');
 
-  late Future<void> _initialFontReady;
-  late int _currentPage = widget.initialPage;
   int? _lastPlaybackPage;
 
   @override
   void initState() {
     super.initState();
-    // The QCF page text uses a per-page font family `QCF4_tajweed_NNN` that
-    // is shipped as a zipped TTF in the package's assets. Until the font is
-    // extracted and registered with Flutter's FontLoader, Text widgets that
-    // reference the family render blank glyphs. Block on the visible page
-    // and fire-and-forget the neighbours so swipes don't blank.
-    _initialFontReady = _loadInitialFont(widget.initialPage);
-    _preloadAround(widget.initialPage);
-  }
-
-  Future<void> _loadInitialFont(int page) async {
-    try {
-      await widget.loadInitialFont(page);
-    } catch (e, st) {
-      appLogger.warning('QCF font load failed for page $page: $e', e, st);
-      if (mounted) widget.onRenderUnavailable?.call();
-      rethrow;
-    }
+    // The pager opens directly on [initialPage] (the controller's initial
+    // page), so its onPageChanged does not fire for it — surface it once so
+    // the reader header shows the right page number from the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onPageChanged?.call(_controller.currentPage);
+    });
   }
 
   @override
@@ -110,209 +94,173 @@ class _PageMushafViewState extends ConsumerState<PageMushafView> {
     super.dispose();
   }
 
-  void _preloadAround(int page) {
-    // Don't await — neighbours load in the background.
-    widget.preloadPages(page, radius: _preloadRadius).catchError((
-      Object e,
-      StackTrace st,
-    ) {
-      appLogger.fine('QCF preload around $page non-fatal: $e');
-    });
-  }
-
-  void _onPageChanged(int page) {
-    setState(() => _currentPage = page);
-    _preloadAround(page);
-    widget.onPageChanged?.call(page);
-  }
-
-  /// Advances to the next mushaf page (higher number).
-  Future<void> _goNext() async {
-    if (_currentPage >= kMushafPageCount) return;
-    await _controller.nextPage(duration: _animDuration, curve: _animCurve);
-  }
-
-  /// Returns to the previous mushaf page (lower number).
-  Future<void> _goPrev() async {
-    if (_currentPage <= 1) return;
-    await _controller.previousPage(duration: _animDuration, curve: _animCurve);
-  }
-
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
     // The page is rendered RTL — moving "forward" through the mushaf means
-    // moving visually leftward. Bind arrow keys to that mental model:
-    //   ← advances to the next page (higher number)
-    //   → retreats to the previous page (lower number)
-    // Page Up / Page Down honour the same forward/back semantics.
+    // moving visually leftward:
+    //   ← / Page Down advance to the next page (higher number)
+    //   → / Page Up  retreat to the previous page (lower number)
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
         event.logicalKey == LogicalKeyboardKey.pageDown) {
-      _goNext();
+      _controller.next();
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
         event.logicalKey == LogicalKeyboardKey.pageUp) {
-      _goPrev();
+      _controller.previous();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = context.theme.colors.brightness == Brightness.dark;
-    final tajweed = ref.watch(tajweedEnabledProvider);
-    final activeAyah = ref.watch(activePlaybackAyahProvider);
-    final activePage = _pageFor(activeAyah);
-    _schedulePlaybackPage(activePage);
-    final highlights = _playbackHighlights(
-      context: context,
-      activeAyah: activeAyah,
-      activePage: activePage,
+  /// Moves the reader to the active playback ayah's page once per page change.
+  void _followPlayback(AyahKey? activeAyah) {
+    if (activeAyah == null) return;
+    final pageResult = widget.engine.repository!.pageForAyah(
+      qul.AyahKey(activeAyah.surah, activeAyah.ayah),
     );
-
-    return KeyedSubtree(
-      key: PageMushafViewKeys.root,
-      child: FutureBuilder<void>(
-        future: _initialFontReady,
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return const Center(
-              key: PageMushafViewKeys.fontLoading,
-              child: SizedBox(
-                width: 240,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FProgress(),
-                    SizedBox(height: 12),
-                    Text('Loading mushaf page…'),
-                  ],
-                ),
-              ),
-            );
-          }
-          if (snap.hasError) {
-            return const SizedBox.shrink();
-          }
-          return Focus(
-            focusNode: _focusNode,
-            autofocus: true,
-            onKeyEvent: _handleKey,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  // The package's PageView only enables touch+stylus drag by
-                  // default, so on desktop the mushaf is stuck. Allow mouse
-                  // and trackpad drag to swipe pages.
-                  child: ScrollConfiguration(
-                    behavior: const _DesktopDragScrollBehavior(),
-                    child: qcf.QuranPageView(
-                      key: PageMushafViewKeys.pageView,
-                      pageController: _controller,
-                      highlights: highlights,
-                      isDarkMode: isDark,
-                      isTajweed: tajweed,
-                      pageBackgroundColor: Colors.transparent,
-                      onPageChanged: _onPageChanged,
-                    ),
-                  ),
-                ),
-                _PageNavOverlay(
-                  currentPage: _currentPage,
-                  onPrev: _goPrev,
-                  onNext: _goNext,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+    if (pageResult is! qul.MushafOk<int>) return;
+    final page = pageResult.value;
+    if (page == _lastPlaybackPage) return;
+    _lastPlaybackPage = page;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.openPage(page);
+    });
   }
 
-  int? _pageFor(AyahKey? key) {
-    if (key == null) return null;
-    try {
-      return qcf.getPageNumber(key.surah, key.ayah);
-    } on Object catch (e) {
-      appLogger.fine('Could not resolve playback ayah page for $key: $e');
-      return null;
-    }
-  }
-
-  List<qcf.HighlightVerse> _playbackHighlights({
-    required BuildContext context,
-    required AyahKey? activeAyah,
-    required int? activePage,
-  }) {
-    if (activeAyah == null || activePage == null) {
-      return const <qcf.HighlightVerse>[];
-    }
+  List<qul.MushafDecoration> _playbackDecorations(
+    AyahKey? activeAyah,
+    Color highlight,
+  ) {
+    if (activeAyah == null) return const <qul.MushafDecoration>[];
     return [
-      qcf.HighlightVerse(
-        surah: activeAyah.surah,
-        verseNumber: activeAyah.ayah,
-        page: activePage,
-        color: context.theme.colors.primary.withValues(alpha: 0.28),
+      qul.MushafDecoration(
+        ayah: qul.AyahKey(activeAyah.surah, activeAyah.ayah),
+        color: highlight,
       ),
     ];
   }
 
-  void _schedulePlaybackPage(int? page) {
-    if (page == null || page == _lastPlaybackPage) return;
-    _lastPlaybackPage = page;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_controller.hasClients || page == _currentPage) return;
-      _controller.animateToPage(
-        page - 1,
-        duration: _animDuration,
-        curve: _animCurve,
-      );
-    });
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final scheme = ref.watch(mushafColorSchemeProvider);
+    final headerFontsReady =
+        ref.watch(mushafHeaderFontsProvider).valueOrNull ?? false;
+    final activeAyah = ref.watch(activePlaybackAyahProvider);
+    _followPlayback(activeAyah);
+
+    return KeyedSubtree(
+      key: PageMushafViewKeys.root,
+      child: Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _handleKey,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: qul.MushafView(
+                repository: widget.engine.repository!,
+                assetSource: widget.engine.assetSource!,
+                controller: _controller,
+                palette: scheme.palette,
+                pageColor: scheme.darkPage ? _kDarkPageColor : _kLightPageColor,
+                decorations: _playbackDecorations(
+                  activeAyah,
+                  colors.primary.withValues(alpha: 0.30),
+                ),
+                headerBuilder: (line) => _mushafHeader(
+                  line: line,
+                  isDark: scheme.darkPage,
+                  fontsReady: headerFontsReady,
+                ),
+                onPageChanged: (page) {
+                  setState(() {});
+                  widget.onPageChanged?.call(page);
+                },
+                onAyahTap: (ayah) => appLogger.fine(
+                  'reader: tapped ayah ${ayah.surah}:${ayah.ayah}',
+                ),
+                onRenderUnavailable: () => widget.onRenderUnavailable?.call(),
+              ),
+            ),
+            _PageNavOverlay(
+              currentPage: _controller.currentPage,
+              pageCount: _controller.pageCount,
+              onPrev: _controller.previous,
+              onNext: _controller.next,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-/// ScrollBehavior that re-enables mouse + trackpad drag, which Flutter
-/// disables by default on desktop. Without this the package's `PageView`
-/// will not advance to the next page on a desktop swipe gesture.
-class _DesktopDragScrollBehavior extends MaterialScrollBehavior {
-  const _DesktopDragScrollBehavior();
+/// Builds a `surah_name` / `basmallah` header line from the QUL header fonts.
+/// Returns `null` (engine renders its plain ornamental band) when the
+/// surah-header glyph is unavailable.
+Widget? _mushafHeader({
+  required qul.MushafLine line,
+  required bool isDark,
+  required bool fontsReady,
+}) {
+  final ink = isDark ? const Color(0xFFEDE6D2) : const Color(0xFF1B1B1B);
 
-  @override
-  Set<PointerDeviceKind> get dragDevices => const {
-    PointerDeviceKind.touch,
-    PointerDeviceKind.mouse,
-    PointerDeviceKind.trackpad,
-    PointerDeviceKind.stylus,
-  };
+  if (line.type == qul.MushafLineType.basmallah) {
+    // The bismillah ligature (U+FDFD); the QUL `quran-common` font carries the
+    // mushaf glyph, with the system font as a fallback if it is unavailable.
+    return Text(
+      bismillahGlyph,
+      textDirection: TextDirection.rtl,
+      style: TextStyle(
+        fontFamily: fontsReady ? quranCommonFamily : null,
+        fontSize: 30,
+        color: ink,
+      ),
+    );
+  }
+
+  final glyph = surahHeaderGlyph(line.surahNumber ?? 0);
+  if (!fontsReady || glyph == null) return null;
+  // The ornamental QUL surah-header colour glyph (COLR) — light/dark variant.
+  // Sized well above the ayah glyphs so the header reads as a header.
+  return Text(
+    glyph,
+    textDirection: TextDirection.rtl,
+    style: TextStyle(
+      fontFamily: isDark ? surahHeaderFamilyDark : surahHeaderFamilyLight,
+      fontSize: 80,
+      color: ink,
+    ),
+  );
 }
 
 class _PageNavOverlay extends StatelessWidget {
   const _PageNavOverlay({
     required this.currentPage,
+    required this.pageCount,
     required this.onPrev,
     required this.onNext,
   });
 
   final int currentPage;
+  final int pageCount;
   final VoidCallback onPrev;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
     // The mushaf renders RTL: visually, "next page" sits on the LEFT and
-    // "previous page" sits on the RIGHT. Mirror the chevrons accordingly so
-    // the user reaches forward by tapping the left chevron.
+    // "previous page" sits on the RIGHT. Mirror the chevrons accordingly.
     final canPrev = currentPage > 1;
-    final canNext = currentPage < kMushafPageCount;
+    final canNext = currentPage < pageCount;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
       child: Row(
         children: [
-          // Forward (advance to higher page number).
           _NavButton(
             buttonKey: PageMushafViewKeys.nextButton,
             icon: FIcons.chevronLeft,
@@ -320,7 +268,6 @@ class _PageNavOverlay extends StatelessWidget {
             tooltip: 'Next page',
           ),
           const Spacer(),
-          // Back (return to lower page number).
           _NavButton(
             buttonKey: PageMushafViewKeys.prevButton,
             icon: FIcons.chevronRight,
@@ -361,8 +308,48 @@ class _NavButton extends StatelessWidget {
   }
 }
 
-/// Helper that uses the locator to map an [AyahKey] anchor to a page number.
-/// Returns the anchor's page if known, otherwise falls back to `initialPage`.
+/// A non-interactive preview of mushaf page 1 (Sūrat al-Fātiḥah, opening with
+/// āyah 1:1) in the currently selected colour style. Used by the Settings
+/// colour-style picker so the user previews a real verse.
+class MushafStylePreview extends ConsumerStatefulWidget {
+  const MushafStylePreview({required this.engine, super.key});
+
+  /// A non-fallback engine — `repository` / `assetSource` are read directly.
+  final MushafEngine engine;
+
+  @override
+  ConsumerState<MushafStylePreview> createState() => _MushafStylePreviewState();
+}
+
+class _MushafStylePreviewState extends ConsumerState<MushafStylePreview> {
+  late final qul.MushafController _controller = qul.MushafController(
+    pageCount: widget.engine.repository!.pageCount,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ref.watch(mushafColorSchemeProvider);
+    return IgnorePointer(
+      child: qul.MushafView(
+        repository: widget.engine.repository!,
+        assetSource: widget.engine.assetSource!,
+        controller: _controller,
+        palette: scheme.palette,
+        pageColor: scheme.darkPage ? _kDarkPageColor : _kLightPageColor,
+        padding: const EdgeInsets.all(8),
+      ),
+    );
+  }
+}
+
+/// Maps an [AyahKey] anchor to a page number via the locator. Returns the
+/// anchor's page if known, otherwise falls back to `initialPage`.
 int resolveAnchorPage({
   required MushafLocator locator,
   required int initialPage,

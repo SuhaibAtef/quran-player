@@ -166,15 +166,15 @@ GoRouter buildAppRouter(Ref ref) {
                   .getAyah(key);
               if (ayahResult is Err) return RoutePaths.home;
 
-              final status = ref.read(mushafLocatorProvider);
+              final engine = await ref.read(mushafEngineProvider.future);
               final anchorParam = '$s:$a';
-              if (status.usingFallback) {
+              if (engine.usingFallback) {
                 // Page rendering unavailable; route the repository-validated
                 // ayah to text mode.
                 return '${RoutePaths.readerSurahFor(s)}'
                     '?anchor=$anchorParam';
               }
-              final pageRes = status.locator.pageForAyah(key);
+              final pageRes = engine.locator.pageForAyah(key);
               if (pageRes is Err<int>) return RoutePaths.home;
               final mode = ref.read(readerModeProvider);
               if (mode == ReaderMode.page) {

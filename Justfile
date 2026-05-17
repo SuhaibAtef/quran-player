@@ -28,6 +28,7 @@ format:
 test:
     flutter test
     flutter test packages/quran_mcp_server/test/
+    flutter test packages/tarteel_qul/test/
 
 # Run a single test file: `just test-file test/widget_test.dart`
 test-file FILE:

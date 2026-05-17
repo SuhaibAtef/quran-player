@@ -13,6 +13,8 @@ import 'package:quran_player/core/error/failure.dart';
 import 'package:quran_player/core/error/result.dart';
 import 'package:quran_player/data/quran/integrity_checker.dart';
 import 'package:quran_player/data/quran/manifest.dart';
+import 'package:quran_player/data/quran/mushaf_engine.dart';
+import 'package:quran_player/data/quran/mushaf_locator_provider.dart';
 import 'package:quran_player/data/quran/providers.dart';
 import 'package:quran_player/data/tafsir/providers.dart';
 import 'package:quran_player/domain/quran/ayah.dart';
@@ -107,6 +109,12 @@ Future<GoRouter> _pumpSearch(
           (ref) async => Result.ok(fakeTafsirBootstrap()),
         ),
         quranRepositoryProvider.overrideWithValue(repo),
+        // The reader's QUL engine is irrelevant to search-page navigation;
+        // override it so the `/reader/ayah` redirect resolves synchronously
+        // (text mode) instead of opening the real engine off-frame.
+        mushafEngineProvider.overrideWith(
+          (ref) => const MushafEngine.unavailable(),
+        ),
       ],
       child: const App(),
     ),

@@ -23,17 +23,20 @@ if ($cmd -notmatch '\bgit\s+commit(\s|$)') { exit 0 }
 if ($env:CLAUDE_HOOK_PRE_COMMIT_TESTS -eq 'running') { exit 0 }
 $env:CLAUDE_HOOK_PRE_COMMIT_TESTS = 'running'
 
+# Host app, then each workspace package. Stop at the first failing suite.
+$suites = @('', 'packages/quran_mcp_server/test/', 'packages/tarteel_qul/test/')
 try {
-    $hostOutput = & flutter test 2>&1
-    $hostCode = $LASTEXITCODE
-    if ($hostCode -eq 0) {
-        $pkgOutput = & flutter test packages/quran_mcp_server/test/ 2>&1
-        $pkgCode = $LASTEXITCODE
-        $output = @($hostOutput) + $pkgOutput
-        $code = $pkgCode
-    } else {
-        $output = $hostOutput
-        $code = $hostCode
+    $output = @()
+    $code = 0
+    foreach ($suite in $suites) {
+        if ($suite) {
+            $suiteOutput = & flutter test $suite 2>&1
+        } else {
+            $suiteOutput = & flutter test 2>&1
+        }
+        $code = $LASTEXITCODE
+        $output += $suiteOutput
+        if ($code -ne 0) { break }
     }
 } finally {
     Remove-Item Env:CLAUDE_HOOK_PRE_COMMIT_TESTS -ErrorAction SilentlyContinue

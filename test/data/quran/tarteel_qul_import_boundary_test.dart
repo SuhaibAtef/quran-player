@@ -5,12 +5,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// `qcf_quran_plus` is a rendering-only dependency. At most two files in the
-/// project may import it: the locator implementation (coordinate
-/// translation) and the page-mode reader widget (rendering). Every other
-/// layer goes through the framework-free [MushafLocator] contract.
+/// `package:tarteel_qul/` is the printed-mushaf rendering engine. At most two
+/// host files may import it: the engine adapter (the `MushafAssetSource`
+/// implementation + the `MushafLocator` coordinate translation) and the
+/// page-mode reader widget (rendering). Every other layer drives the
+/// printed-mushaf coordinate system through the framework-free `MushafLocator`
+/// contract and the opaque `MushafEngine` handle.
 const _allowedRelativePaths = <String>[
-  'lib/data/quran/mushaf_locator_qcf.dart',
+  'lib/data/quran/mushaf_engine.dart',
   'lib/features/reader/widgets/page_mushaf_view.dart',
 ];
 
@@ -24,17 +26,17 @@ bool _isAllowed(String relative) {
 }
 
 void main() {
-  test('only the locator and page-mode widget import qcf_quran_plus', () {
+  test('only the engine adapter and page-mode widget import tarteel_qul', () {
     final offenders = <String>[];
     for (final dir in _watchedDirs) {
       for (final entity in Directory(dir).listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         final relative = entity.path.replaceAll('\\', '/');
         final content = entity.readAsStringSync();
-        final importsQcf =
-            content.contains("import 'package:qcf_quran_plus/") ||
-            content.contains('import "package:qcf_quran_plus/');
-        if (importsQcf && !_isAllowed(relative)) {
+        final importsEngine =
+            content.contains("import 'package:tarteel_qul/") ||
+            content.contains('import "package:tarteel_qul/');
+        if (importsEngine && !_isAllowed(relative)) {
           offenders.add(relative);
         }
       }
@@ -43,7 +45,8 @@ void main() {
       offenders,
       isEmpty,
       reason:
-          'qcf_quran_plus must be confined to ${_allowedRelativePaths.join(", ")}; '
+          'package:tarteel_qul/ must be confined to '
+          '${_allowedRelativePaths.join(", ")}; '
           'offenders:\n${offenders.join("\n")}',
     );
   });
