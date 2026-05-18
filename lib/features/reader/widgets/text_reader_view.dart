@@ -7,6 +7,8 @@ import '../../../data/quran/providers.dart';
 import '../../../domain/quran/ayah.dart';
 import '../../../domain/quran/ayah_key.dart';
 import '../../player/state/audio_player_controller.dart';
+import '../state/reading_position_controller.dart';
+import 'verse_action_menu.dart';
 
 class TextReaderViewKeys {
   const TextReaderViewKeys._();
@@ -18,9 +20,6 @@ class TextReaderViewKeys {
 
   static Key tile(int surah, int ayah) =>
       ValueKey('reader.text_view.tile.$surah.$ayah');
-
-  static Key play(int surah, int ayah) =>
-      ValueKey('reader.text_view.play.$surah.$ayah');
 }
 
 class TextReaderView extends ConsumerStatefulWidget {
@@ -42,6 +41,56 @@ class _TextReaderViewState extends ConsumerState<TextReaderView> {
   AyahKey? _lastPlaybackScroll;
 
   @override
+  void initState() {
+    super.initState();
+    // Record the open position once the first frame is laid out. `ref` is
+    // valid here (a live callback) — unlike in `dispose()`.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _recordReadingPosition();
+    });
+  }
+
+  /// Records the topmost visible ayah as the last-read position. Falls back to
+  /// the open anchor, then the surah's first ayah. A safe no-op when `user.db`
+  /// is unavailable. Called after first layout and on every scroll settle.
+  void _recordReadingPosition() {
+    final ayah = _topmostVisibleAyahNumber() ?? widget.anchor?.ayah ?? 1;
+    final keyResult = AyahKey.tryNew(widget.surahNumber, ayah);
+    if (keyResult case Ok(:final value)) {
+      ref.read(readingPositionProvider.notifier).record(value);
+    }
+  }
+
+  /// The ayah number whose row currently sits at the top of the viewport, or
+  /// `null` when no row render box is available (e.g. the list never built).
+  int? _topmostVisibleAyahNumber() {
+    final self = context.findRenderObject();
+    if (self is! RenderBox || !self.attached) return null;
+    final viewportTop = self.localToGlobal(Offset.zero).dy;
+
+    int? straddling; // greatest dy at or above the top edge
+    double? straddlingDy;
+    int? firstBelow; // smallest dy below the top edge
+    double? firstBelowDy;
+
+    _itemKeys.forEach((ayah, key) {
+      final box = key.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached) return;
+      final dy = box.localToGlobal(Offset.zero).dy;
+      if (dy <= viewportTop + 1) {
+        if (straddlingDy == null || dy > straddlingDy!) {
+          straddlingDy = dy;
+          straddling = ayah;
+        }
+      } else if (firstBelowDy == null || dy < firstBelowDy!) {
+        firstBelowDy = dy;
+        firstBelow = ayah;
+      }
+    });
+    return straddling ?? firstBelow;
+  }
+
+  @override
   Widget build(BuildContext context) {
     ref.listen<AyahKey?>(activePlaybackAyahProvider, (_, active) {
       _schedulePlaybackScroll(active);
@@ -53,30 +102,36 @@ class _TextReaderViewState extends ConsumerState<TextReaderView> {
 
     return KeyedSubtree(
       key: TextReaderViewKeys.root,
-      child: FutureBuilder<Result<List<Ayah>>>(
-        future: future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(
-              key: TextReaderViewKeys.loading,
-              child: FProgress(),
-            );
-          }
-          final result = snapshot.data;
-          if (result == null) {
-            return _ErrorState(message: 'No data');
-          }
-          return switch (result) {
-            Ok(:final value) => _AyahList(
-              surahNumber: widget.surahNumber,
-              ayahs: value,
-              anchor: widget.anchor,
-              itemKeys: _itemKeys,
-              onListReady: _scheduleAnchorScroll,
-            ),
-            Err(:final failure) => _ErrorState(message: failure.message),
-          };
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: (_) {
+          _recordReadingPosition();
+          return false;
         },
+        child: FutureBuilder<Result<List<Ayah>>>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                key: TextReaderViewKeys.loading,
+                child: FProgress(),
+              );
+            }
+            final result = snapshot.data;
+            if (result == null) {
+              return _ErrorState(message: 'No data');
+            }
+            return switch (result) {
+              Ok(:final value) => _AyahList(
+                surahNumber: widget.surahNumber,
+                ayahs: value,
+                anchor: widget.anchor,
+                itemKeys: _itemKeys,
+                onListReady: _scheduleAnchorScroll,
+              ),
+              Err(:final failure) => _ErrorState(message: failure.message),
+            };
+          },
+        ),
       ),
     );
   }
@@ -145,54 +200,47 @@ class _AyahList extends ConsumerWidget {
           final a = ayahs[i];
           final tileKey = itemKeys.putIfAbsent(a.key.ayah, GlobalKey.new);
           final active = activeAyah == a.key;
-          return Container(
-            key: TextReaderViewKeys.tile(a.key.surah, a.key.ayah),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: active
-                ? BoxDecoration(
-                    color: context.theme.colors.primary.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: context.theme.colors.primary),
-                  )
-                : null,
-            child: Row(
-              key: tileKey,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 76,
-                  child: Row(
-                    textDirection: TextDirection.ltr,
-                    children: [
-                      FButton(
-                        key: TextReaderViewKeys.play(a.key.surah, a.key.ayah),
-                        variant: FButtonVariant.ghost,
-                        onPress: () => ref
-                            .read(audioPlayerControllerProvider.notifier)
-                            .startAyah(a.key),
-                        child: const Icon(FIcons.play),
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => showVerseActionMenu(context, a.key),
+            child: Container(
+              key: TextReaderViewKeys.tile(a.key.surah, a.key.ayah),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: active
+                  ? BoxDecoration(
+                      color: context.theme.colors.primary.withValues(
+                        alpha: 0.10,
                       ),
-                      Expanded(
-                        child: Text(
-                          '${a.key.ayah}.',
-                          textDirection: TextDirection.ltr,
-                          textAlign: TextAlign.end,
-                          style: context.theme.typography.sm,
-                        ),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: context.theme.colors.primary),
+                    )
+                  : null,
+              child: Row(
+                key: tileKey,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    child: Text(
+                      '${a.key.ayah}.',
+                      textDirection: TextDirection.ltr,
+                      textAlign: TextAlign.center,
+                      style: context.theme.typography.sm.copyWith(
+                        color: context.theme.colors.mutedForeground,
                       ),
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    a.text,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    style: context.theme.typography.lg.copyWith(height: 2.0),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      a.text,
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      style: context.theme.typography.lg.copyWith(height: 2.0),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

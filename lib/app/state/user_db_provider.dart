@@ -9,6 +9,10 @@ import 'package:quran_mcp_server/quran_mcp_server.dart';
 import '../../core/error/failure.dart';
 import '../../core/error/result.dart';
 import '../../core/logging/logger.dart';
+import '../../data/bookmarks/sqlite_bookmark_repository.dart';
+import '../../data/reading/sqlite_reading_position_repository.dart';
+import '../../domain/bookmarks/bookmark_repository.dart';
+import '../../domain/reading/reading_position_repository.dart';
 
 /// Resolves the absolute path that the user-writable `user.db` lives at.
 ///
@@ -27,10 +31,24 @@ final userDbPathProvider = FutureProvider<String>((ref) async {
 /// `AsyncValue` because the failure case is non-fatal — the rest of the app
 /// keeps running and the Settings page surfaces a notice.
 class UserDbState {
-  const UserDbState._({required this.health, this.repository, this.failure});
+  const UserDbState._({
+    required this.health,
+    this.repository,
+    this.bookmarkRepository,
+    this.readingPositionRepository,
+    this.failure,
+  });
 
-  factory UserDbState.ready(AuditLogRepository repository) =>
-      UserDbState._(health: UserDbHealth.ready, repository: repository);
+  factory UserDbState.ready({
+    required AuditLogRepository auditLog,
+    required BookmarkRepository bookmarks,
+    required ReadingPositionRepository readingPosition,
+  }) => UserDbState._(
+    health: UserDbHealth.ready,
+    repository: auditLog,
+    bookmarkRepository: bookmarks,
+    readingPositionRepository: readingPosition,
+  );
 
   factory UserDbState.failed(Failure failure) =>
       UserDbState._(health: UserDbHealth.failed, failure: failure);
@@ -38,7 +56,16 @@ class UserDbState {
   static const loading = UserDbState._(health: UserDbHealth.loading);
 
   final UserDbHealth health;
+
+  /// MCP audit log repository. `null` unless [health] is [UserDbHealth.ready].
   final AuditLogRepository? repository;
+
+  /// User bookmark repository. `null` unless [health] is [UserDbHealth.ready].
+  final BookmarkRepository? bookmarkRepository;
+
+  /// Last-read position repository. `null` unless ready.
+  final ReadingPositionRepository? readingPositionRepository;
+
   final Failure? failure;
 }
 
@@ -56,10 +83,14 @@ final userDbStateProvider = FutureProvider<UserDbState>((ref) async {
     ref.onDispose(() async {
       await db.close();
     });
-    final repo = AuditLogRepository(db);
-    final pruned = await repo.prune7Days();
+    final auditLog = AuditLogRepository(db);
+    final pruned = await auditLog.prune7Days();
     appLogger.info('user.db audit_log prune complete (count=$pruned)');
-    return UserDbState.ready(repo);
+    return UserDbState.ready(
+      auditLog: auditLog,
+      bookmarks: SqliteBookmarkRepository(db),
+      readingPosition: SqliteReadingPositionRepository(db),
+    );
   } on Object catch (error, stackTrace) {
     appLogger.severe('user.db open failed', error, stackTrace);
     return UserDbState.failed(DataAccessFailure('user.db unavailable: $error'));
@@ -80,6 +111,23 @@ final userDbHealthProvider = Provider<AsyncValue<UserDbHealth>>((ref) {
 final auditLogRepositoryProvider = Provider<AuditLogRepository?>((ref) {
   final async = ref.watch(userDbStateProvider);
   return async.whenOrNull(data: (state) => state.repository);
+});
+
+/// Bookmark repository. Returns `null` when `user.db` failed to open — callers
+/// degrade gracefully (bookmark surfaces show a non-fatal notice or are
+/// absent) and never crash.
+final bookmarkRepositoryProvider = Provider<BookmarkRepository?>((ref) {
+  final async = ref.watch(userDbStateProvider);
+  return async.whenOrNull(data: (state) => state.bookmarkRepository);
+});
+
+/// Last-read position repository. Returns `null` when `user.db` failed to
+/// open — callers degrade gracefully and never crash.
+final readingPositionRepositoryProvider = Provider<ReadingPositionRepository?>((
+  ref,
+) {
+  final async = ref.watch(userDbStateProvider);
+  return async.whenOrNull(data: (state) => state.readingPositionRepository);
 });
 
 /// Convenience for tests that want to wait for the open + prune to complete.

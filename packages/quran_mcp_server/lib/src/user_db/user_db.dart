@@ -20,7 +20,10 @@ Future<Database> openUserDb({required String absolutePath}) async {
 
 Future<void> _ensureSchema(Database db) async {
   await db.transaction((txn) async {
-    for (final stmt in userDbSchemaV1Statements) {
+    for (final stmt in [
+      ...userDbSchemaV1Statements,
+      ...userDbSchemaV2Statements,
+    ]) {
       await txn.execute(stmt);
     }
     final existing = await txn.query(
@@ -38,6 +41,16 @@ Future<void> _ensureSchema(Database db) async {
         'key': 'created_at_utc',
         'value': '${DateTime.now().toUtc().millisecondsSinceEpoch}',
       });
+    } else if (existing.first['value'] != '$userDbSchemaVersion') {
+      // Existing DB created at an older schema version: the additive v2
+      // statements above have already created the new tables; bring the
+      // recorded version forward.
+      await txn.update(
+        'schema_meta',
+        {'value': '$userDbSchemaVersion'},
+        where: 'key = ?',
+        whereArgs: ['version'],
+      );
     }
   });
 }

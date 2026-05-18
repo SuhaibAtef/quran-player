@@ -10,12 +10,12 @@ import 'package:forui/forui.dart';
 import 'package:tarteel_qul/tarteel_qul.dart' as qul;
 
 import '../../../app/state/mushaf_color_scheme.dart';
-import '../../../core/logging/logger.dart';
 import '../../../data/quran/mushaf_engine.dart';
 import '../../../data/quran/mushaf_fonts.dart';
 import '../../../domain/quran/ayah_key.dart';
 import '../../../domain/quran/mushaf_locator.dart';
 import '../../player/state/audio_player_controller.dart';
+import 'verse_action_menu.dart';
 
 class PageMushafViewKeys {
   const PageMushafViewKeys._();
@@ -180,8 +180,9 @@ class _PageMushafViewState extends ConsumerState<PageMushafView> {
                   setState(() {});
                   widget.onPageChanged?.call(page);
                 },
-                onAyahTap: (ayah) => appLogger.fine(
-                  'reader: tapped ayah ${ayah.surah}:${ayah.ayah}',
+                onAyahTap: (ayah) => showVerseActionMenu(
+                  context,
+                  AyahKey(ayah.surah, ayah.ayah),
                 ),
                 onRenderUnavailable: () => widget.onRenderUnavailable?.call(),
               ),
