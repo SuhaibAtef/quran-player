@@ -7,6 +7,7 @@ import '../../app/router/route_names.dart';
 import '../../core/error/result.dart';
 import '../../domain/quran/surah.dart';
 import '../player/state/audio_player_controller.dart';
+import '../reader/state/reading_position_controller.dart';
 import '../surahs/state/surahs_provider.dart';
 
 class HomePageKeys {
@@ -17,6 +18,7 @@ class HomePageKeys {
   static const list = Key('home.surah_list');
   static const loading = Key('home.surah_loading');
   static const error = Key('home.surah_error');
+  static const continueReading = Key('home.continue_reading');
 
   static Key playSurah(int surah) => ValueKey('home.surah_play.$surah');
 }
@@ -36,7 +38,12 @@ class HomePage extends ConsumerWidget {
           loading: () => const _LoadingState(),
           error: (e, st) => _ErrorState(message: 'Could not load surahs: $e'),
           data: (result) => switch (result) {
-            Ok(:final value) => _SurahList(surahs: value),
+            Ok(:final value) => Column(
+              children: [
+                _ContinueReadingCard(surahs: value),
+                Expanded(child: _SurahList(surahs: value)),
+              ],
+            ),
             Err(:final failure) => _ErrorState(message: failure.message),
           },
         ),
@@ -80,6 +87,40 @@ class _ErrorState extends StatelessWidget {
       child: FAlert(
         title: const Text("Couldn't load the surah list"),
         subtitle: Text(message),
+      ),
+    );
+  }
+}
+
+/// "Continue reading" entry point shown above the surah list when a reading
+/// position has been recorded. Absent otherwise. Opens the existing ayah
+/// reader deep link, so no new route or top-level destination is added.
+class _ContinueReadingCard extends ConsumerWidget {
+  const _ContinueReadingCard({required this.surahs});
+
+  final List<Surah> surahs;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final position = ref.watch(readingPositionProvider).valueOrNull;
+    if (position == null) return const SizedBox.shrink();
+
+    final match = surahs.where((s) => s.number == position.key.surah);
+    final surahName = match.isEmpty
+        ? 'Surah ${position.key.surah}'
+        : match.first.nameLatin;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: FTile(
+        key: HomePageKeys.continueReading,
+        prefix: const Icon(FIcons.bookOpen),
+        title: const Text('Continue reading'),
+        subtitle: Text('$surahName · ${position.key}'),
+        suffix: const Icon(FIcons.chevronRight),
+        onPress: () => context.go(
+          RoutePaths.readerAyahFor(position.key.surah, position.key.ayah),
+        ),
       ),
     );
   }

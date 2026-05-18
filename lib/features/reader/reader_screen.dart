@@ -8,6 +8,7 @@ import '../../data/quran/mushaf_locator_provider.dart';
 import '../../data/quran/providers.dart';
 import '../../domain/quran/ayah_key.dart';
 import '../../domain/quran/mushaf_locator.dart';
+import 'state/reading_position_controller.dart';
 import 'widgets/page_mushaf_view.dart';
 import 'widgets/text_reader_view.dart';
 
@@ -136,7 +137,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               initialPage: target.pageNumber,
               anchor: target.anchor,
             ),
-            onPageChanged: (page) => setState(() => _currentPage = page),
+            onPageChanged: (page) {
+              setState(() => _currentPage = page);
+              // Record the page's first ayah as the last-read position.
+              // PageMushafView fires this for the initial page too, so open
+              // and every page turn are both covered.
+              final firstAyah = engine.locator.firstAyahOnPage(page);
+              if (firstAyah case Ok(:final value)) {
+                ref.read(readingPositionProvider.notifier).record(value);
+              }
+            },
             onRenderUnavailable: () {
               if (!_pageRenderUnavailable && mounted) {
                 setState(() => _pageRenderUnavailable = true);
