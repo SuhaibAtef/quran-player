@@ -5,7 +5,7 @@
 ## 2. QUL CI bundle (maintainer prerequisite)
 
 - [x] 2.1 Assemble `qul-ci-bundle.zip` from the local `assets/qul/` contents, preserving the subdirectory layout (the 3 root files plus `surah_headers/` and `juz_name_font/`)
-- [x] 2.2 Create a **draft** GitHub Release tagged `qul-assets-v1` in this repo and upload `qul-ci-bundle.zip` as its asset
+- [x] 2.2 Create a **prerelease** GitHub Release tagged `qul-assets-v1` in this repo and upload `qul-ci-bundle.zip` as its asset (started as draft per design D4, switched to prerelease after the first CI run proved a `contents: read` `GITHUB_TOKEN` cannot see drafts — design risk note amended)
 - [x] 2.3 Verify `gh release download qul-assets-v1 --pattern qul-ci-bundle.zip` succeeds with a repo-scoped token
 
 ## 3. Justfile recipes

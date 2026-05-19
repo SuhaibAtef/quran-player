@@ -84,7 +84,7 @@ The Linux job first `apt-get install`s the Flutter Linux toolchain (`clang cmake
 
 ## Risks / Trade-offs
 
-- **QUL bundle is publicly downloadable if hosted on a public release** → Upload the `qul-assets-v1` release as a **draft** (or prerelease): `gh release download` still retrieves draft assets with the repo-scoped `GITHUB_TOKEN`, but they are not surfaced on the public Releases page. Either way, this is the same KFGQPC-font redistribution the published app binary already performs (see `THIRD_PARTY_NOTICES.md`).
+- **QUL bundle is publicly downloadable if hosted on a public release** → Upload the `qul-assets-v1` release as a **prerelease**: it shows on the Releases page tagged "Pre-release" rather than as the headline release, but stays reachable by `gh release download` from CI. Drafts were considered first but ruled out — GitHub's default `GITHUB_TOKEN` runs with `contents: read` under D7, and read-only tokens cannot see drafts; making `contents: write` workflow-wide just to read the bundle would undo D7. Either way, this is the same KFGQPC-font redistribution the published app binary already performs (see `THIRD_PARTY_NOTICES.md`).
 - **macOS/Linux builds are unverified by the team** (only Windows is exercised today) → The first `release.yml` run may fail on macOS/Linux. Treat that as discovery, not regression; fix breakage in this change or a fast follow. CI surfacing it is the point.
 - **Unsigned binaries** → Windows SmartScreen and macOS Gatekeeper will warn end users. Documented as a known limitation in `README.md`; signing is a deferred non-goal.
 - **macOS runner minutes bill at ~10x** → The 3-OS build matrix runs only on `push: main`, never on pull requests; PRs pay only for the single Ubuntu check job.
