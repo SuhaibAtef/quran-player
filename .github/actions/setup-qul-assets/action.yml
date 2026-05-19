@@ -1,0 +1,68 @@
+name: Set up QUL mushaf assets
+description: >-
+  Populates the gitignored assets/qul/ directory on a CI runner from the
+  qul-ci-bundle.zip asset on a maintainer-uploaded GitHub Release. Restores the
+  bundle from the runner cache when possible and downloads it on a cache miss.
+  Required before any flutter test / flutter build step because pubspec.yaml
+  declares files under assets/qul/ as Flutter assets (see decision D6).
+
+inputs:
+  release-tag:
+    description: >-
+      GitHub Release tag holding qul-ci-bundle.zip. Bump this single default
+      when a new bundle is published (e.g. qul-assets-v2).
+    default: qul-assets-v1
+
+runs:
+  using: composite
+  steps:
+    - name: Restore QUL assets from cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: assets/qul
+        key: qul-assets-${{ inputs.release-tag }}
+
+    - name: Download and extract QUL bundle
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: |
+        set -euo pipefail
+        echo "QUL assets not in cache — downloading qul-ci-bundle.zip from release '$RELEASE_TAG'."
+        mkdir -p assets/qul
+        if ! gh release download "$RELEASE_TAG" \
+             --repo "$GH_REPO" \
+             --pattern qul-ci-bundle.zip \
+             --dir "$RUNNER_TEMP"; then
+          echo "::error::Could not download 'qul-ci-bundle.zip' from the '$RELEASE_TAG' release of $GH_REPO."
+          echo "::error::A maintainer must create that release and upload the bundle first — see README 'QUL CI bundle'."
+          exit 1
+        fi
+        unzip -o "$RUNNER_TEMP/qul-ci-bundle.zip" -d assets/qul
+        rm -f "$RUNNER_TEMP/qul-ci-bundle.zip"
+
+    - name: Verify QUL assets are present
+      shell: bash
+      run: |
+        set -euo pipefail
+        missing=0
+        for f in \
+          assets/qul/qpc-v4-tajweed-15-lines.db \
+          assets/qul/qpc-v4.db \
+          assets/qul/ttf.zip \
+          assets/qul/surah_headers/QCF_SurahHeader_COLOR-Regular.ttf \
+          assets/qul/juz_name_font/quran-common.ttf; do
+          if [ ! -f "$f" ]; then
+            echo "::error::Required QUL asset missing after setup: $f"
+            missing=1
+          fi
+        done
+        if [ "$missing" -ne 0 ]; then
+          echo "::error::qul-ci-bundle.zip did not contain the expected files — rebuild and re-upload the bundle."
+          exit 1
+        fi
+        echo "QUL assets ready under assets/qul/."

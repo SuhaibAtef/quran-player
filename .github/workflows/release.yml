@@ -1,0 +1,185 @@
+name: Release
+
+# On every push to main, builds release binaries for Windows, macOS, and Linux
+# on native runners, packages each into a distributable archive, and publishes
+# a GitHub Release tagged from the pubspec.yaml version. Publication is skipped
+# when a release for that version already exists, so doc-only merges that do
+# not bump the version do not spam releases. See the add-ci-cd-pipeline
+# OpenSpec change for the design rationale (decisions D5, D6).
+
+on:
+  push:
+    branches: [main]
+
+# gh release create needs write access to the repository's releases.
+permissions:
+  contents: write
+
+# Cancel a superseded run on the same ref when a newer commit arrives.
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Same pinned Flutter version as ci.yml (decision D7).
+  FLUTTER_VERSION: "3.41.9"
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # Keep all three builds running even if one fails — the first release
+      # run is expected to surface macOS/Linux breakage, and seeing every
+      # failure at once is the point (design Risks/Trade-offs).
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+          - platform: macos
+            runner: macos-latest
+          - platform: linux
+            runner: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install Linux build toolchain
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up QUL mushaf assets
+        uses: ./.github/actions/setup-qul-assets
+
+      - name: Read app version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          full="$(grep -m1 -E '^version:' pubspec.yaml \
+            | sed -E 's/^version:[[:space:]]*//' | tr -d '[:space:]')"
+          echo "version=${full%%+*}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Windows release
+        if: matrix.platform == 'windows'
+        run: flutter build windows --release
+
+      - name: Package Windows archive
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $name = "quran-companion-${{ steps.version.outputs.version }}-windows-x64"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path build/windows/x64/runner/Release/* `
+            -DestinationPath "dist/$name.zip"
+
+      - name: Build macOS release
+        if: matrix.platform == 'macos'
+        run: flutter build macos --release
+
+      - name: Package macOS archive
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="quran-companion-${{ steps.version.outputs.version }}-macos"
+          app="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n1)"
+          if [ -z "$app" ]; then
+            echo "::error::No .app bundle found under build/macos/Build/Products/Release"
+            exit 1
+          fi
+          mkdir -p dist
+          # ditto preserves macOS bundle metadata that a plain zip would drop.
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/${name}.zip"
+
+      - name: Build Linux release
+        if: matrix.platform == 'linux'
+        run: flutter build linux --release
+
+      - name: Package Linux archive
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="quran-companion-${{ steps.version.outputs.version }}-linux-x64"
+          mkdir -p dist
+          tar -czf "dist/${name}.tar.gz" -C build/linux/x64/release/bundle .
+
+      - name: Upload platform archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive release tag from pubspec.yaml
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          full="$(grep -m1 -E '^version:' pubspec.yaml \
+            | sed -E 's/^version:[[:space:]]*//' | tr -d '[:space:]')"
+          version="${full%%+*}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether the release already exists
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.version.outputs.tag }} already exists — skipping publication."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all platform archives
+        if: steps.existing.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        if: steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "Quran Companion ${{ steps.version.outputs.version }}" \
+            --notes "Automated release for version ${{ steps.version.outputs.version }}. Unsigned desktop builds for Windows, macOS, and Linux — see README for SmartScreen/Gatekeeper notes." \
+            artifacts/*

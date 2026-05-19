@@ -141,8 +141,28 @@ Day-to-day commands are wrapped in the [Justfile](Justfile) — run `just` to li
 | `just run [device]` | Launch on a device (default: `windows`) |
 | `just build <target>` | Release build (`windows`, `macos`, `linux`) |
 | `just check` | format + analyze + test (pre-commit gate) |
+| `just ci` | format-check + analyze + test (the exact gate CI runs) |
 
 If you don't have `just` installed, the underlying `flutter`/`dart` commands work directly.
+
+## Continuous integration & releases
+
+GitHub Actions runs two workflows ([.github/workflows/](.github/workflows/)):
+
+- **CI** — on every pull request to `develop`/`main` and every push to those branches, runs the `just ci` gate (format check, static analysis, and tests for the host app plus the `quran_mcp_server` and `tarteel_qul` workspace packages) on Ubuntu. Run `just ci` locally to reproduce it exactly.
+- **Release** — on push to `main`, builds release binaries for Windows, macOS, and Linux on native runners, packages each (`quran-companion-<version>-<platform>.zip` / `.tar.gz`), and publishes a GitHub Release tagged `v<version>` derived from `pubspec.yaml`. A merge that does not change the version is not republished.
+
+**Released binaries are unsigned.** Windows SmartScreen and macOS Gatekeeper warn on first launch — on Windows choose *More info → Run anyway*; on macOS right-click the app and choose *Open*. Code signing and notarization are deferred enhancements.
+
+### QUL CI bundle (maintainer)
+
+CI runs on fresh checkouts where `assets/qul/` is empty — it is gitignored (see [Setup](#setup--download-the-qul-mushaf-assets-required)). Rather than committing the ~70 MB of QUL files, both workflows fetch them from a side-channel GitHub Release:
+
+1. A maintainer zips the local `assets/qul/` contents — the three root files (`qpc-v4-tajweed-15-lines.db`, `qpc-v4.db`, `ttf.zip`) plus the `surah_headers/` and `juz_name_font/` directories — into `qul-ci-bundle.zip`, preserving that layout.
+2. They create a **prerelease** GitHub Release tagged `qul-assets-v1` in this repository and upload `qul-ci-bundle.zip` as its asset. A prerelease — rather than a draft — is required because GitHub Actions' default `GITHUB_TOKEN` runs with `contents: read` (CI workflow least-privilege, design D7) and read-only tokens cannot see draft releases; a prerelease is visible but flagged as "Pre-release" on the Releases page. The threat model is unchanged: the same KFGQPC fonts are already redistributed inside the published app binary (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+3. The [setup-qul-assets](.github/actions/setup-qul-assets/action.yml) composite action restores `assets/qul/` from the runner cache, or on a cache miss `gh release download`s the bundle and extracts it — before any `flutter test`/`flutter build` step.
+
+To refresh the bundle, upload a new asset under a new tag (`qul-assets-v2`) and bump the `release-tag` default in the composite action. The QUL files never enter git history.
 
 ## Data sources
 
