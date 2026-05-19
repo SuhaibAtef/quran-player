@@ -36,6 +36,14 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localization. flutter_localizations supplies the framework's locale
+  # delegates; intl backs the generated AppLocalizations and locale-aware
+  # formatting. intl is `any` so it resolves to whatever the pinned Flutter
+  # SDK's flutter_localizations requires.
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -116,6 +124,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Generates AppLocalizations from lib/l10n/*.arb. Configured by l10n.yaml.
+  generate: true
 
   assets:
     - assets/quran/quran.sqlite
