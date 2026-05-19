@@ -4,6 +4,7 @@ import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/player/widgets/mini_player.dart';
+import '../../l10n/app_localizations.dart';
 import '../router/route_names.dart';
 
 class AppShellKeys {
@@ -26,20 +27,34 @@ class _Destination {
   final IconData icon;
 }
 
-const _destinations = <_Destination>[
-  _Destination(path: RoutePaths.home, label: 'Surahs', icon: FIcons.bookOpen),
-  _Destination(path: RoutePaths.search, label: 'Search', icon: FIcons.search),
+/// Builds the navigation destinations with localized labels. Resolved per
+/// build from [AppLocalizations] so the labels follow the active locale.
+List<_Destination> _destinationsFor(AppLocalizations l10n) => <_Destination>[
+  _Destination(
+    path: RoutePaths.home,
+    label: l10n.navSurahs,
+    icon: FIcons.bookOpen,
+  ),
+  _Destination(
+    path: RoutePaths.search,
+    label: l10n.navSearch,
+    icon: FIcons.search,
+  ),
   _Destination(
     path: RoutePaths.bookmarks,
-    label: 'Bookmarks',
+    label: l10n.navBookmarks,
     icon: FIcons.bookmark,
   ),
   _Destination(
     path: RoutePaths.settings,
-    label: 'Settings',
+    label: l10n.navSettings,
     icon: FIcons.settings,
   ),
-  _Destination(path: RoutePaths.mcpStatus, label: 'MCP', icon: FIcons.plug),
+  _Destination(
+    path: RoutePaths.mcpStatus,
+    label: l10n.navMcp,
+    icon: FIcons.plug,
+  ),
 ];
 
 class AppShell extends ConsumerWidget {
@@ -50,9 +65,9 @@ class AppShell extends ConsumerWidget {
 
   static const double _wideBreakpoint = 768;
 
-  int _selectedIndex() {
-    for (var i = 0; i < _destinations.length; i++) {
-      final dest = _destinations[i];
+  int _selectedIndex(List<_Destination> destinations) {
+    for (var i = 0; i < destinations.length; i++) {
+      final dest = destinations[i];
       if (dest.path == RoutePaths.home) {
         if (location == '/' || location.startsWith('/surahs')) return i;
       } else if (location == dest.path ||
@@ -63,13 +78,15 @@ class AppShell extends ConsumerWidget {
     return 0;
   }
 
-  void _go(BuildContext context, int index) {
-    context.go(_destinations[index].path);
+  void _go(BuildContext context, List<_Destination> destinations, int index) {
+    context.go(destinations[index].path);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = _selectedIndex();
+    final l10n = AppLocalizations.of(context);
+    final destinations = _destinationsFor(l10n);
+    final selected = _selectedIndex(destinations);
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= _wideBreakpoint) {
@@ -82,23 +99,23 @@ class AppShell extends ConsumerWidget {
                       width: 220,
                       child: FSidebar(
                         key: AppShellKeys.sidebar,
-                        header: const Padding(
-                          padding: EdgeInsets.symmetric(
+                        header: Padding(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 16,
                           ),
                           child: Text(
-                            'Quran Companion',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            l10n.appTitle,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                         children: [
-                          for (final (i, dest) in _destinations.indexed)
+                          for (final (i, dest) in destinations.indexed)
                             FSidebarItem(
                               icon: Icon(dest.icon),
                               label: Text(dest.label),
                               selected: i == selected,
-                              onPress: () => _go(context, i),
+                              onPress: () => _go(context, destinations, i),
                             ),
                         ],
                       ),
@@ -117,9 +134,9 @@ class AppShell extends ConsumerWidget {
             FBottomNavigationBar(
               key: AppShellKeys.bottomNav,
               index: selected,
-              onChange: (i) => _go(context, i),
+              onChange: (i) => _go(context, destinations, i),
               children: [
-                for (final dest in _destinations)
+                for (final dest in destinations)
                   FBottomNavigationBarItem(
                     icon: Icon(dest.icon),
                     label: Text(dest.label),

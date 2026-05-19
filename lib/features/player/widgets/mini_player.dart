@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
 import '../../../domain/audio/audio_playback_state.dart';
+import '../../../l10n/app_localizations.dart';
 import '../state/audio_player_controller.dart';
 
 class MiniPlayerKeys {
@@ -128,7 +129,7 @@ class _TrackLabels extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          item?.label ?? 'Quran recitation',
+          item?.label ?? AppLocalizations.of(context).playerDefaultTrackLabel,
           key: MiniPlayerKeys.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -138,7 +139,8 @@ class _TrackLabels extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          state.reciter?.name ?? 'Default reciter',
+          state.reciter?.name ??
+              AppLocalizations.of(context).playerDefaultReciter,
           key: MiniPlayerKeys.subtitle,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -257,7 +259,7 @@ class _ExpandedPlayer extends ConsumerWidget {
           _ProgressBar(state: state, onSeek: controller.seek),
           const SizedBox(height: 16),
           Text(
-            'Queue',
+            AppLocalizations.of(context).playerQueueTitle,
             style: context.theme.typography.sm.copyWith(
               fontWeight: FontWeight.w600,
             ),

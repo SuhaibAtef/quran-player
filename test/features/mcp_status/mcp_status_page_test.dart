@@ -6,6 +6,8 @@ import 'package:quran_player/app/state/mcp_server_provider.dart';
 import 'package:quran_player/app/state/mcp_settings_provider.dart';
 import 'package:quran_player/features/mcp_status/mcp_status_page.dart';
 
+import '../../_support/localized.dart';
+
 class _FakeMcpServerController extends McpServerController {
   _FakeMcpServerController(super.ref) {
     state = McpServerStatus(
@@ -44,11 +46,13 @@ void main() {
               ),
             ),
           ],
-          child: const Directionality(
-            textDirection: TextDirection.ltr,
-            child: MediaQuery(
-              data: MediaQueryData(size: Size(800, 1200)),
-              child: McpStatusPage(),
+          child: localized(
+            const Directionality(
+              textDirection: TextDirection.ltr,
+              child: MediaQuery(
+                data: MediaQueryData(size: Size(800, 1200)),
+                child: McpStatusPage(),
+              ),
             ),
           ),
         ),
@@ -95,11 +99,13 @@ void main() {
               ),
             ),
           ],
-          child: const Directionality(
-            textDirection: TextDirection.ltr,
-            child: MediaQuery(
-              data: MediaQueryData(size: Size(800, 1200)),
-              child: McpStatusPage(),
+          child: localized(
+            const Directionality(
+              textDirection: TextDirection.ltr,
+              child: MediaQuery(
+                data: MediaQueryData(size: Size(800, 1200)),
+                child: McpStatusPage(),
+              ),
             ),
           ),
         ),

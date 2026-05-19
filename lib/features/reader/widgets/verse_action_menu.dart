@@ -4,6 +4,7 @@ import 'package:forui/forui.dart';
 
 import '../../../app/state/user_db_provider.dart';
 import '../../../domain/quran/ayah_key.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../bookmarks/state/bookmarks_controller.dart';
 import '../../player/state/audio_player_controller.dart';
 
@@ -37,6 +38,7 @@ class _VerseActionSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bookmarked = ref.watch(bookmarkedKeysProvider).contains(ayah);
     final bookmarksAvailable = ref.watch(bookmarkRepositoryProvider) != null;
+    final l10n = AppLocalizations.of(context);
 
     return KeyedSubtree(
       key: VerseActionMenuKeys.sheet,
@@ -51,7 +53,7 @@ class _VerseActionSheet extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
                 child: Text(
-                  'Ayah $ayah',
+                  l10n.verseMenuAyahLabel('$ayah'),
                   style: context.theme.typography.sm.copyWith(
                     color: context.theme.colors.mutedForeground,
                   ),
@@ -60,7 +62,7 @@ class _VerseActionSheet extends ConsumerWidget {
               FTile(
                 key: VerseActionMenuKeys.play,
                 prefix: const Icon(FIcons.play),
-                title: const Text('Play from here'),
+                title: Text(l10n.verseMenuPlay),
                 onPress: () {
                   Navigator.of(context).pop();
                   ref
@@ -74,7 +76,11 @@ class _VerseActionSheet extends ConsumerWidget {
                   prefix: Icon(
                     bookmarked ? FIcons.bookmarkCheck : FIcons.bookmark,
                   ),
-                  title: Text(bookmarked ? 'Remove bookmark' : 'Bookmark'),
+                  title: Text(
+                    bookmarked
+                        ? l10n.verseMenuRemoveBookmark
+                        : l10n.verseMenuAddBookmark,
+                  ),
                   onPress: () {
                     Navigator.of(context).pop();
                     ref.read(bookmarksProvider.notifier).toggle(ayah);
@@ -84,8 +90,8 @@ class _VerseActionSheet extends ConsumerWidget {
                 key: VerseActionMenuKeys.highlight,
                 enabled: false,
                 prefix: const Icon(FIcons.highlighter),
-                title: const Text('Highlight'),
-                subtitle: const Text('Coming soon'),
+                title: Text(l10n.verseMenuHighlight),
+                subtitle: Text(l10n.verseMenuComingSoon),
               ),
             ],
           ),

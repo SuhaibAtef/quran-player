@@ -14,6 +14,7 @@ import '../../../data/quran/mushaf_engine.dart';
 import '../../../data/quran/mushaf_fonts.dart';
 import '../../../domain/quran/ayah_key.dart';
 import '../../../domain/quran/mushaf_locator.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../player/state/audio_player_controller.dart';
 import 'verse_action_menu.dart';
 
@@ -260,22 +261,28 @@ class _PageNavOverlay extends StatelessWidget {
     final canNext = currentPage < pageCount;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
-      child: Row(
-        children: [
-          _NavButton(
-            buttonKey: PageMushafViewKeys.nextButton,
-            icon: FIcons.chevronLeft,
-            onPress: canNext ? onNext : null,
-            tooltip: 'Next page',
-          ),
-          const Spacer(),
-          _NavButton(
-            buttonKey: PageMushafViewKeys.prevButton,
-            icon: FIcons.chevronRight,
-            onPress: canPrev ? onPrev : null,
-            tooltip: 'Previous page',
-          ),
-        ],
+      // The mushaf is read right-to-left regardless of the UI locale, so the
+      // page nav is pinned LTR: "next" stays on the left and "previous" on
+      // the right even when the app chrome is Arabic/RTL.
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          children: [
+            _NavButton(
+              buttonKey: PageMushafViewKeys.nextButton,
+              icon: FIcons.chevronLeft,
+              onPress: canNext ? onNext : null,
+              tooltip: AppLocalizations.of(context).readerNextPage,
+            ),
+            const Spacer(),
+            _NavButton(
+              buttonKey: PageMushafViewKeys.prevButton,
+              icon: FIcons.chevronRight,
+              onPress: canPrev ? onPrev : null,
+              tooltip: AppLocalizations.of(context).readerPreviousPage,
+            ),
+          ],
+        ),
       ),
     );
   }

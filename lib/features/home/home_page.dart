@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/route_names.dart';
 import '../../core/error/result.dart';
+import '../../core/l10n/display_number.dart';
 import '../../domain/quran/surah.dart';
+import '../../l10n/app_localizations.dart';
 import '../player/state/audio_player_controller.dart';
 import '../reader/state/reading_position_controller.dart';
 import '../surahs/state/surahs_provider.dart';
@@ -31,12 +33,19 @@ class HomePage extends ConsumerWidget {
     final async = ref.watch(surahsProvider);
 
     return FScaffold(
-      header: const FHeader(title: Text('Surahs', key: HomePageKeys.title)),
+      header: FHeader(
+        title: Text(
+          AppLocalizations.of(context).surahsTitle,
+          key: HomePageKeys.title,
+        ),
+      ),
       child: KeyedSubtree(
         key: HomePageKeys.body,
         child: async.when(
           loading: () => const _LoadingState(),
-          error: (e, st) => _ErrorState(message: 'Could not load surahs: $e'),
+          error: (e, st) => _ErrorState(
+            message: AppLocalizations.of(context).surahsLoadErrorDetail('$e'),
+          ),
           data: (result) => switch (result) {
             Ok(:final value) => Column(
               children: [
@@ -63,10 +72,10 @@ class _LoadingState extends StatelessWidget {
         width: 240,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            FProgress(),
-            SizedBox(height: 12),
-            Text('Loading surahs…'),
+          children: [
+            const FProgress(),
+            const SizedBox(height: 12),
+            Text(AppLocalizations.of(context).surahsLoading),
           ],
         ),
       ),
@@ -85,7 +94,7 @@ class _ErrorState extends StatelessWidget {
       key: HomePageKeys.error,
       padding: const EdgeInsets.all(24),
       child: FAlert(
-        title: const Text("Couldn't load the surah list"),
+        title: Text(AppLocalizations.of(context).surahsLoadErrorTitle),
         subtitle: Text(message),
       ),
     );
@@ -105,9 +114,10 @@ class _ContinueReadingCard extends ConsumerWidget {
     final position = ref.watch(readingPositionProvider).valueOrNull;
     if (position == null) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context);
     final match = surahs.where((s) => s.number == position.key.surah);
     final surahName = match.isEmpty
-        ? 'Surah ${position.key.surah}'
+        ? l10n.surahFallbackName(position.key.surah)
         : match.first.nameLatin;
 
     return Padding(
@@ -115,9 +125,15 @@ class _ContinueReadingCard extends ConsumerWidget {
       child: FTile(
         key: HomePageKeys.continueReading,
         prefix: const Icon(FIcons.bookOpen),
-        title: const Text('Continue reading'),
-        subtitle: Text('$surahName · ${position.key}'),
-        suffix: const Icon(FIcons.chevronRight),
+        title: Text(l10n.homeContinueReading),
+        subtitle: Text(
+          l10n.homeContinueReadingSubtitle(surahName, '${position.key}'),
+        ),
+        suffix: Icon(
+          Directionality.of(context) == TextDirection.rtl
+              ? FIcons.chevronLeft
+              : FIcons.chevronRight,
+        ),
         onPress: () => context.go(
           RoutePaths.readerAyahFor(position.key.surah, position.key.ayah),
         ),
@@ -133,6 +149,7 @@ class _SurahList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final localeName = AppLocalizations.of(context).localeName;
     return ListView.builder(
       key: HomePageKeys.list,
       itemCount: surahs.length,
@@ -150,14 +167,16 @@ class _SurahList extends ConsumerWidget {
                   prefix: SizedBox(
                     width: 32,
                     child: Text(
-                      '${s.number}',
+                      localizedNumber(s.number, localeName),
                       textAlign: TextAlign.end,
                       style: context.theme.typography.sm,
                     ),
                   ),
                   title: Text(s.nameArabic, textDirection: TextDirection.rtl),
                   subtitle: Text(
-                    '${s.nameLatin} · ${s.ayahCount} ayahs',
+                    AppLocalizations.of(
+                      context,
+                    ).surahListSubtitle(s.nameLatin, s.ayahCount),
                     style: context.theme.typography.sm,
                   ),
                 ),

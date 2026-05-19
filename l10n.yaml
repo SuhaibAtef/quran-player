@@ -1,0 +1,8 @@
+# Configuration for `flutter gen-l10n` — see add-localization-and-rtl change.
+# Generates the AppLocalizations accessor from the ARB catalogues in lib/l10n/.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+# Getters return non-null — every key is present in the English template.
+nullable-getter: false

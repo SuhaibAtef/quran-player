@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class BootstrappingScreenKeys {
   const BootstrappingScreenKeys._();
 
@@ -22,10 +24,10 @@ class BootstrappingScreen extends StatelessWidget {
           width: 240,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              FProgress(key: BootstrappingScreenKeys.indicator),
-              SizedBox(height: 16),
-              Text('Verifying Quran data…'),
+            children: [
+              const FProgress(key: BootstrappingScreenKeys.indicator),
+              const SizedBox(height: 16),
+              Text(AppLocalizations.of(context).bootstrappingMessage),
             ],
           ),
         ),

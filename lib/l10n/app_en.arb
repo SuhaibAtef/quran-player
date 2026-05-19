@@ -1,0 +1,625 @@
+{
+  "@@locale": "en",
+  "appTitle": "Quran Companion",
+  "@appTitle": {
+    "description": "The application name, shown in the OS window title and the sidebar header."
+  },
+  "navSurahs": "Surahs",
+  "@navSurahs": {
+    "description": "Navigation label for the Surahs (home) destination."
+  },
+  "navSearch": "Search",
+  "@navSearch": {
+    "description": "Navigation label for the Search destination."
+  },
+  "navBookmarks": "Bookmarks",
+  "@navBookmarks": {
+    "description": "Navigation label for the Bookmarks destination."
+  },
+  "navSettings": "Settings",
+  "@navSettings": {
+    "description": "Navigation label for the Settings destination."
+  },
+  "navMcp": "MCP",
+  "@navMcp": {
+    "description": "Navigation label for the MCP Status destination. MCP (Model Context Protocol) is a proper noun and stays untranslated."
+  },
+  "surahsTitle": "Surahs",
+  "@surahsTitle": {
+    "description": "Header title of the Surahs (home) page."
+  },
+  "surahsLoading": "Loading surahs…",
+  "@surahsLoading": {
+    "description": "Shown while the surah list is loading."
+  },
+  "surahsLoadErrorTitle": "Couldn't load the surah list",
+  "@surahsLoadErrorTitle": {
+    "description": "Title of the alert shown when the surah list fails to load."
+  },
+  "surahsLoadErrorDetail": "Could not load surahs: {error}",
+  "@surahsLoadErrorDetail": {
+    "description": "Detail message when the surah list provider throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "surahFallbackName": "Surah {number}",
+  "@surahFallbackName": {
+    "description": "Fallback name for a surah when its record is not in the loaded list.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "homeContinueReading": "Continue reading",
+  "@homeContinueReading": {
+    "description": "Title of the card that reopens the last reading position."
+  },
+  "homeContinueReadingSubtitle": "{surahName} · {reference}",
+  "@homeContinueReadingSubtitle": {
+    "description": "Subtitle of the Continue reading card: surah name and ayah reference.",
+    "placeholders": {
+      "surahName": {
+        "type": "String"
+      },
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "surahListSubtitle": "{name} · {count, plural, =1{1 ayah} other{{count} ayahs}}",
+  "@surahListSubtitle": {
+    "description": "Surah list row subtitle: the Latin name and the ayah count.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "surahDetailTitle": "Surah {id}",
+  "@surahDetailTitle": {
+    "description": "Header title of the surah detail placeholder page.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "surahDetailPlaceholder": "Ayahs for surah {id} will render here.",
+  "@surahDetailPlaceholder": {
+    "description": "Placeholder body text of the surah detail page.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "readerPreparingMushaf": "Preparing the mushaf…",
+  "@readerPreparingMushaf": {
+    "description": "Shown while the printed-mushaf engine is opening."
+  },
+  "readerPageTitle": "Page {current} of {total}",
+  "@readerPageTitle": {
+    "description": "Reader header title in page mode.",
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "readerSurahTitle": "Surah {number} · {name}",
+  "@readerSurahTitle": {
+    "description": "Reader header title in surah text mode.",
+    "placeholders": {
+      "number": {"type": "int"},
+      "name": {"type": "String"}
+    }
+  },
+  "readerSurahAyahTitle": "Surah {number} · {name} · Ayah {ayah}",
+  "@readerSurahAyahTitle": {
+    "description": "Reader header title in surah text mode when anchored to an ayah.",
+    "placeholders": {
+      "number": {"type": "int"},
+      "name": {"type": "String"},
+      "ayah": {"type": "int"}
+    }
+  },
+  "readerSurahShortTitle": "Surah {number}",
+  "@readerSurahShortTitle": {
+    "description": "Reader header fallback title when the surah record is unavailable.",
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "readerFallbackTitle": "Mushaf rendering unavailable",
+  "@readerFallbackTitle": {
+    "description": "Title of the banner shown when page mode degrades to text."
+  },
+  "readerFallbackBody": "Showing plain text. Try restarting the app.",
+  "@readerFallbackBody": {
+    "description": "Body of the banner shown when page mode degrades to text."
+  },
+  "readerNoData": "No data",
+  "@readerNoData": {
+    "description": "Error message when the reader receives no ayah data."
+  },
+  "readerLoadAyahsErrorTitle": "Couldn't load ayahs",
+  "@readerLoadAyahsErrorTitle": {
+    "description": "Title of the alert shown when surah ayahs fail to load."
+  },
+  "readerNextPage": "Next page",
+  "@readerNextPage": {
+    "description": "Tooltip and accessibility label for the next-page button in the mushaf reader."
+  },
+  "readerPreviousPage": "Previous page",
+  "@readerPreviousPage": {
+    "description": "Tooltip and accessibility label for the previous-page button in the mushaf reader."
+  },
+  "searchTitle": "Search",
+  "@searchTitle": {
+    "description": "Header title of the Search page."
+  },
+  "searchHint": "Search Arabic Quran text",
+  "@searchHint": {
+    "description": "Placeholder hint shown inside the search text field."
+  },
+  "searchButton": "Search",
+  "@searchButton": {
+    "description": "Label of the button that runs the search."
+  },
+  "searchIdleTitle": "Search the Quran",
+  "@searchIdleTitle": {
+    "description": "Title shown on the Search page before any query is run."
+  },
+  "searchIdleMessage": "Enter Arabic text to find matching ayahs.",
+  "@searchIdleMessage": {
+    "description": "Guidance shown on the Search page before any query is run."
+  },
+  "searchLoading": "Searching…",
+  "@searchLoading": {
+    "description": "Shown while a search query is running."
+  },
+  "searchEmptyTitle": "No matches",
+  "@searchEmptyTitle": {
+    "description": "Title shown when a search returns no results."
+  },
+  "searchEmptyMessage": "No ayahs matched \"{query}\".",
+  "@searchEmptyMessage": {
+    "description": "Message shown when a search returns no results.",
+    "placeholders": {
+      "query": {"type": "String"}
+    }
+  },
+  "searchInvalidTitle": "Search query needed",
+  "@searchInvalidTitle": {
+    "description": "Title shown when the search query is empty or invalid."
+  },
+  "searchInvalidMessage": "Enter Arabic text to search.",
+  "@searchInvalidMessage": {
+    "description": "Fallback guidance shown when the search query is invalid."
+  },
+  "searchFailureFallback": "Search failed.",
+  "@searchFailureFallback": {
+    "description": "Fallback message shown when a search fails without a specific error."
+  },
+  "searchFailureTitle": "Couldn't search the Quran",
+  "@searchFailureTitle": {
+    "description": "Title of the alert shown when a search fails."
+  },
+  "searchResultTitle": "{reference} · {name}",
+  "@searchResultTitle": {
+    "description": "Search result row title: the ayah reference and the Latin surah name.",
+    "placeholders": {
+      "reference": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "bookmarksTitle": "Bookmarks",
+  "@bookmarksTitle": {
+    "description": "Header title of the Bookmarks page."
+  },
+  "bookmarksLoading": "Loading bookmarks…",
+  "@bookmarksLoading": {
+    "description": "Shown while saved bookmarks are loading."
+  },
+  "bookmarksEmptyTitle": "No bookmarks yet",
+  "@bookmarksEmptyTitle": {
+    "description": "Title shown when the user has no saved bookmarks."
+  },
+  "bookmarksEmptyMessage": "Tap the bookmark icon while reading to save an ayah here.",
+  "@bookmarksEmptyMessage": {
+    "description": "Guidance shown when the user has no saved bookmarks."
+  },
+  "bookmarksUnavailableTitle": "Bookmarks unavailable",
+  "@bookmarksUnavailableTitle": {
+    "description": "Title of the notice shown when local storage could not be opened."
+  },
+  "bookmarksUnavailableMessage": "Local storage could not be opened, so bookmarks are off this session. Reading and audio are unaffected.",
+  "@bookmarksUnavailableMessage": {
+    "description": "Body of the notice shown when local storage could not be opened."
+  },
+  "bookmarksLoadErrorTitle": "Couldn't load bookmarks",
+  "@bookmarksLoadErrorTitle": {
+    "description": "Title of the alert shown when bookmarks fail to load."
+  },
+  "bookmarkTileTitle": "{reference} · {name}",
+  "@bookmarkTileTitle": {
+    "description": "Bookmark row title: the ayah reference and the surah name.",
+    "placeholders": {
+      "reference": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "playerDefaultTrackLabel": "Quran recitation",
+  "@playerDefaultTrackLabel": {
+    "description": "Fallback title shown in the player when the current track has no label."
+  },
+  "playerDefaultReciter": "Default reciter",
+  "@playerDefaultReciter": {
+    "description": "Fallback subtitle shown in the player when no reciter name is available."
+  },
+  "playerQueueTitle": "Queue",
+  "@playerQueueTitle": {
+    "description": "Section heading for the playback queue in the expanded player."
+  },
+  "verseMenuAyahLabel": "Ayah {reference}",
+  "@verseMenuAyahLabel": {
+    "description": "Header label of the verse action menu, naming the tapped ayah.",
+    "placeholders": {
+      "reference": {"type": "String"}
+    }
+  },
+  "verseMenuPlay": "Play from here",
+  "@verseMenuPlay": {
+    "description": "Verse action menu item that starts playback from the tapped ayah."
+  },
+  "verseMenuAddBookmark": "Bookmark",
+  "@verseMenuAddBookmark": {
+    "description": "Verse action menu item that bookmarks the tapped ayah."
+  },
+  "verseMenuRemoveBookmark": "Remove bookmark",
+  "@verseMenuRemoveBookmark": {
+    "description": "Verse action menu item that removes the bookmark on the tapped ayah."
+  },
+  "verseMenuHighlight": "Highlight",
+  "@verseMenuHighlight": {
+    "description": "Verse action menu item for highlighting (not yet available)."
+  },
+  "verseMenuComingSoon": "Coming soon",
+  "@verseMenuComingSoon": {
+    "description": "Subtitle marking a verse action menu item as not yet available."
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Header title of the Settings page."
+  },
+  "settingsThemeSection": "Theme",
+  "@settingsThemeSection": {
+    "description": "Settings section heading for the app theme."
+  },
+  "settingsThemeSystem": "System",
+  "@settingsThemeSystem": {
+    "description": "Theme option that follows the operating system setting."
+  },
+  "settingsThemeLight": "Light",
+  "@settingsThemeLight": {
+    "description": "Light theme option."
+  },
+  "settingsThemeDark": "Dark",
+  "@settingsThemeDark": {
+    "description": "Dark theme option."
+  },
+  "settingsReaderSection": "Reader",
+  "@settingsReaderSection": {
+    "description": "Settings section heading for the reader mode."
+  },
+  "settingsReaderModePage": "Mushaf page (recommended)",
+  "@settingsReaderModePage": {
+    "description": "Reader mode option for the printed-mushaf page view."
+  },
+  "settingsReaderModeText": "Plain text scroll",
+  "@settingsReaderModeText": {
+    "description": "Reader mode option for the continuous plain-text view."
+  },
+  "settingsMushafColoursSection": "Mushaf colours",
+  "@settingsMushafColoursSection": {
+    "description": "Settings section heading for the mushaf colour style picker."
+  },
+  "settingsMushafPreviewUnavailable": "Mushaf preview unavailable",
+  "@settingsMushafPreviewUnavailable": {
+    "description": "Shown in the colour-style preview when the mushaf engine is unavailable."
+  },
+  "settingsQuranSourceSection": "Quran source",
+  "@settingsQuranSourceSection": {
+    "description": "Settings section heading for the Quran text attribution."
+  },
+  "settingsTafsirSourceSection": "Tafsir source",
+  "@settingsTafsirSourceSection": {
+    "description": "Settings section heading for the tafsir attribution."
+  },
+  "settingsAttributionLoadError": "Couldn't load attribution: {error}",
+  "@settingsAttributionLoadError": {
+    "description": "Shown when source attribution data fails to load.",
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "settingsVersionLabel": "Version {version}",
+  "@settingsVersionLabel": {
+    "description": "Labels a data-source version string.",
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "settingsAudioSection": "Audio source",
+  "@settingsAudioSection": {
+    "description": "Settings section heading for the audio attribution."
+  },
+  "settingsAudioDefaultReciter": "Default reciter: {name} ({style})",
+  "@settingsAudioDefaultReciter": {
+    "description": "Names the default reciter and recitation style.",
+    "placeholders": {
+      "name": {"type": "String"},
+      "style": {"type": "String"}
+    }
+  },
+  "settingsMushafSection": "Mushaf page rendering",
+  "@settingsMushafSection": {
+    "description": "Settings section heading for the mushaf rendering attribution."
+  },
+  "settingsMushafProvider": "Tarteel QUL — QPC V4",
+  "@settingsMushafProvider": {
+    "description": "Name of the mushaf rendering data source. Proper nouns; stays untranslated."
+  },
+  "settingsMushafDescription1": "Mushaf page layout and word-by-word glyph script from the Tarteel Quran Universal Library (qul.tarteel.ai).",
+  "@settingsMushafDescription1": {
+    "description": "First line of the mushaf rendering attribution."
+  },
+  "settingsMushafDescription2": "Rendered with KFGQPC (King Fahd Glorious Qur’an Printing Complex) V4 per-page fonts.",
+  "@settingsMushafDescription2": {
+    "description": "Second line of the mushaf rendering attribution."
+  },
+  "settingsMushafDescription3": "Layout and glyphs only — canonical text comes from Tanzil above.",
+  "@settingsMushafDescription3": {
+    "description": "Third line of the mushaf rendering attribution."
+  },
+  "settingsMcpSection": "MCP server",
+  "@settingsMcpSection": {
+    "description": "Settings section heading for the MCP server controls."
+  },
+  "settingsMcpDescription": "Loopback-only HTTP server that lets local MCP clients query the Quran corpus and (when granted) control playback. Disable to stop the server entirely.",
+  "@settingsMcpDescription": {
+    "description": "Explains what the MCP server does."
+  },
+  "settingsMcpEnable": "Enable MCP",
+  "@settingsMcpEnable": {
+    "description": "Label of the toggle that enables the MCP server."
+  },
+  "settingsMcpPlaybackTitle": "Allow MCP playback control",
+  "@settingsMcpPlaybackTitle": {
+    "description": "Label of the toggle that grants MCP playback (Mode B) scope."
+  },
+  "settingsMcpPlaybackDescription": "Grants Mode B tools (play/pause/seek). When off, playback tools return scope_denied without changing player state.",
+  "@settingsMcpPlaybackDescription": {
+    "description": "Explains the MCP playback control toggle."
+  },
+  "settingsMcpBookmarkTitle": "Allow MCP bookmark access",
+  "@settingsMcpBookmarkTitle": {
+    "description": "Label of the toggle that grants MCP bookmark scope."
+  },
+  "settingsMcpBookmarkDescription": "Reserved for future bookmark tools. Toggle has no effect today.",
+  "@settingsMcpBookmarkDescription": {
+    "description": "Explains the MCP bookmark access toggle."
+  },
+  "settingsMcpClearAudit": "Clear MCP audit log",
+  "@settingsMcpClearAudit": {
+    "description": "Label of the button that clears the MCP audit log."
+  },
+  "settingsMcpAuditStatus": "Audit log status: {error}",
+  "@settingsMcpAuditStatus": {
+    "description": "Shown when the audit log state could not be read.",
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "settingsMcpAuditUnavailable": "MCP audit log unavailable — restart the app or check disk permissions. The Quran reader and audio player are unaffected.",
+  "@settingsMcpAuditUnavailable": {
+    "description": "Shown when the MCP audit log storage could not be opened."
+  },
+  "settingsMcpClearAuditDialogTitle": "Clear MCP audit log?",
+  "@settingsMcpClearAuditDialogTitle": {
+    "description": "Title of the confirmation dialog for clearing the audit log."
+  },
+  "settingsMcpClearAuditDialogBody": "This deletes every recorded MCP tool call. Cannot be undone.",
+  "@settingsMcpClearAuditDialogBody": {
+    "description": "Body of the confirmation dialog for clearing the audit log."
+  },
+  "settingsCancel": "Cancel",
+  "@settingsCancel": {
+    "description": "Generic Cancel button label in Settings dialogs."
+  },
+  "settingsClear": "Clear",
+  "@settingsClear": {
+    "description": "Confirm button label for clearing the audit log."
+  },
+  "mcpStatusTitle": "MCP Status",
+  "@mcpStatusTitle": {
+    "description": "Header title of the MCP Status page."
+  },
+  "mcpStatusServerSection": "Server",
+  "@mcpStatusServerSection": {
+    "description": "MCP Status section heading for the server lifecycle controls."
+  },
+  "mcpStatusTransportSection": "Transport",
+  "@mcpStatusTransportSection": {
+    "description": "MCP Status section heading for the transport details."
+  },
+  "mcpStatusScopesSection": "Active scopes",
+  "@mcpStatusScopesSection": {
+    "description": "MCP Status section heading for the granted scopes."
+  },
+  "mcpStatusToolsSection": "Tools ({count})",
+  "@mcpStatusToolsSection": {
+    "description": "MCP Status section heading for the available tools, with a count.",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "mcpStatusResourcesSection": "Resources ({count})",
+  "@mcpStatusResourcesSection": {
+    "description": "MCP Status section heading for the available resources, with a count.",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "mcpStatusRecentSection": "Recent audit log (last 20)",
+  "@mcpStatusRecentSection": {
+    "description": "MCP Status section heading for the recent audit-log rows."
+  },
+  "mcpStatusState": "State: {state}",
+  "@mcpStatusState": {
+    "description": "Shows the current MCP server lifecycle state.",
+    "placeholders": {
+      "state": {"type": "String"}
+    }
+  },
+  "mcpLifecycleDisabled": "disabled",
+  "@mcpLifecycleDisabled": {
+    "description": "MCP server lifecycle state: the server is disabled."
+  },
+  "mcpLifecycleStarting": "starting",
+  "@mcpLifecycleStarting": {
+    "description": "MCP server lifecycle state: the server is starting."
+  },
+  "mcpLifecycleRunning": "running",
+  "@mcpLifecycleRunning": {
+    "description": "MCP server lifecycle state: the server is running."
+  },
+  "mcpLifecycleStopped": "stopped",
+  "@mcpLifecycleStopped": {
+    "description": "MCP server lifecycle state: the server is stopped."
+  },
+  "mcpLifecycleFailed": "failed",
+  "@mcpLifecycleFailed": {
+    "description": "MCP server lifecycle state: the server failed to start."
+  },
+  "mcpStatusStartButton": "Start MCP Server",
+  "@mcpStatusStartButton": {
+    "description": "Label of the button that starts the MCP server."
+  },
+  "mcpStatusStopButton": "Stop MCP Server",
+  "@mcpStatusStopButton": {
+    "description": "Label of the button that stops the MCP server."
+  },
+  "mcpStatusTransportLine1": "Local-only HTTP MCP transport on the loopback interface. Bearer-token auth gates every request before mcp_dart sees it.",
+  "@mcpStatusTransportLine1": {
+    "description": "First line describing the MCP transport."
+  },
+  "mcpStatusTransportLine2": "Remote access, filesystem tools, and shell commands are not exposed. Use the URL and bearer token with a local MCP client while this app is running.",
+  "@mcpStatusTransportLine2": {
+    "description": "Second line describing the MCP transport."
+  },
+  "mcpStatusUrlLabel": "URL",
+  "@mcpStatusUrlLabel": {
+    "description": "Field label for the MCP server URL."
+  },
+  "mcpStatusTokenLabel": "Token",
+  "@mcpStatusTokenLabel": {
+    "description": "Field label for the MCP bearer token."
+  },
+  "mcpStatusScopesDisabled": "MCP is disabled. Enable it in Settings to grant scopes.",
+  "@mcpStatusScopesDisabled": {
+    "description": "Shown in the scopes section when MCP is disabled."
+  },
+  "mcpStatusScopeReadonly": "readonly: on (master toggle implies)",
+  "@mcpStatusScopeReadonly": {
+    "description": "Scope line for the implicit read-only scope."
+  },
+  "mcpStatusScopePlayback": "playback: {state}",
+  "@mcpStatusScopePlayback": {
+    "description": "Scope line for the playback scope.",
+    "placeholders": {
+      "state": {"type": "String"}
+    }
+  },
+  "mcpStatusScopeBookmark": "bookmark: {state} (reserved — no tools gate on this yet)",
+  "@mcpStatusScopeBookmark": {
+    "description": "Scope line for the reserved bookmark scope.",
+    "placeholders": {
+      "state": {"type": "String"}
+    }
+  },
+  "mcpStatusOn": "on",
+  "@mcpStatusOn": {
+    "description": "Indicates a scope is granted."
+  },
+  "mcpStatusOff": "off",
+  "@mcpStatusOff": {
+    "description": "Indicates a scope is not granted."
+  },
+  "mcpStatusAuditLoadError": "Could not load audit log: {error}",
+  "@mcpStatusAuditLoadError": {
+    "description": "Shown when the recent audit log fails to load.",
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "mcpStatusAuditEmpty": "No MCP activity yet, or audit log unavailable.",
+  "@mcpStatusAuditEmpty": {
+    "description": "Shown when there are no audit-log rows to display."
+  },
+  "bootstrappingMessage": "Verifying Quran data…",
+  "@bootstrappingMessage": {
+    "description": "Shown on the startup screen while data integrity is verified."
+  },
+  "dataIntegrityTitle": "{dataset} data couldn't be verified",
+  "@dataIntegrityTitle": {
+    "description": "Header title of the fatal data-integrity error screen.",
+    "placeholders": {
+      "dataset": {"type": "String"}
+    }
+  },
+  "dataIntegrityBody": "The bundled {dataset} database failed an integrity check at startup. To preserve trust in the text, the app refuses to serve any data until the issue is resolved.",
+  "@dataIntegrityBody": {
+    "description": "Body text of the fatal data-integrity error screen.",
+    "placeholders": {
+      "dataset": {"type": "String"}
+    }
+  },
+  "dataIntegrityDetailLabel": "Detail:",
+  "@dataIntegrityDetailLabel": {
+    "description": "Label preceding the technical failure detail."
+  },
+  "dataIntegrityUnknownDetail": "unknown",
+  "@dataIntegrityUnknownDetail": {
+    "description": "Fallback failure detail when no specific message is available."
+  },
+  "dataIntegrityHint": "Try reinstalling the app, or run `just build-{dataset}-db` if you are working from source.",
+  "@dataIntegrityHint": {
+    "description": "Recovery hint on the data-integrity error screen.",
+    "placeholders": {
+      "dataset": {"type": "String"}
+    }
+  },
+  "settingsLanguageSection": "Language",
+  "@settingsLanguageSection": {
+    "description": "Settings section heading for the interface language."
+  },
+  "settingsLanguageSystem": "System",
+  "@settingsLanguageSystem": {
+    "description": "Language option that follows the operating system locale."
+  },
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {
+    "description": "English language option. Shown as the language's own endonym in every locale; do not translate."
+  },
+  "settingsLanguageArabic": "العربية",
+  "@settingsLanguageArabic": {
+    "description": "Arabic language option. Shown as the language's own endonym in every locale; do not translate."
+  }
+}
