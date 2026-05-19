@@ -63,6 +63,7 @@ What's not yet implemented: offline audio downloads, multiple reciters, real rep
 - Dart SDK `^3.11.0`, Flutter 3.41+ ([pubspec.yaml](pubspec.yaml)). ForUI pinned at `^0.21.3` on the zinc theme variant ([lib/app/state/theme_mode_provider.dart](lib/app/state/theme_mode_provider.dart)).
 - Platforms shipped: Windows (MVP), macOS, Linux. `android/`, `ios/`, `web/` were removed; recreate via `flutter create --platforms=<target> .` if a future change reintroduces one.
 - Lints come from `package:flutter_lints/flutter.yaml` via [analysis_options.yaml](analysis_options.yaml). Add rules under `linter.rules` rather than disabling lints inline.
+- CI/CD via GitHub Actions ([.github/](.github/)) — the `just check` gate runs on every pull request, and a merge to `main` builds and publishes Windows/macOS/Linux release binaries. See [*Continuous integration & releases*](#continuous-integration--releases).
 
 ### Lib layout
 
@@ -137,6 +138,19 @@ Hooks live in committed [.claude/settings.json](.claude/settings.json) with Powe
 - **License compliance** — when [pubspec.lock](pubspec.lock) changes, check transitive licenses against an allow-list (block GPL/AGPL/SSPL by default).
 - **Skill and docs updates** — `Stop` hook prompts the agent to review whether the change should update `AGENTS.md`, `README.md`, or skill files (the *Keep docs current* rule).
 
+The GitHub Actions CI/CD pipeline (see [*Continuous integration & releases*](#continuous-integration--releases)) is the server-side counterpart to these hooks: it already enforces the `just check` gate on every pull request, and several still-planned checks (security scan, dependency audit, license compliance) may land as CI jobs instead of — or alongside — local hooks.
+
+## Continuous integration & releases
+
+GitHub Actions automates the check gate and desktop release builds (the `add-ci-cd-pipeline` change); all definitions live under [.github/](.github/). No application code or runtime behavior is involved — this is build/release infrastructure only.
+
+- **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) — runs on every pull request targeting `develop`/`main` and every push to those branches. A single `check` job on `ubuntu-latest` runs `just ci` (format-check + analyze + test, host app plus the `quran_mcp_server` and `tarteel_qul` workspace packages). VM-based tests are OS-agnostic, so the gate runs on one runner; the token is read-only and superseded runs are cancelled.
+- **Release** ([.github/workflows/release.yml](.github/workflows/release.yml)) — runs on push to `main`. A `windows-latest`/`macos-latest`/`ubuntu-latest` build matrix runs `flutter build <os> --release` and packages each output (`.zip` for Windows/macOS, `.tar.gz` for Linux, named `quran-companion-<version>-<platform>`). A `publish` job then creates a GitHub Release tagged `v<version>` derived from `pubspec.yaml`, and **skips publication if a release for that version already exists** so doc-only merges don't republish.
+- **QUL assets in CI** — `assets/qul/` is gitignored (decision D6) yet declared as Flutter assets, so both workflows run the [setup-qul-assets](.github/actions/setup-qul-assets/action.yml) composite action before any `flutter test`/`flutter build`. It restores an `actions/cache` entry and, on a miss, `gh release download`s `qul-ci-bundle.zip` from the maintainer-uploaded `qul-assets-v1` GitHub Release, then extracts it. The QUL files never enter git history. Refresh the bundle by uploading a new asset under a new tag (`qul-assets-v2`) and bumping the `release-tag` default in the composite action.
+- **Pinned toolchain** — both workflows pin Flutter to an exact version (currently `3.41.9`) via `subosito/flutter-action@v2` so `dart format`/analyzer output is deterministic. Bump the pin deliberately, in its own change, in sync with the team's local SDK.
+- **Maintainer prerequisites** — the `qul-assets-v1` release must exist (workflows fail fast at the bootstrap step otherwise; see README *QUL CI bundle*), and branch protection on `develop`/`main` requiring the CI check is a GitHub repository setting, not a file in this repo.
+- Released binaries are **unsigned** — Windows SmartScreen / macOS Gatekeeper warn end users; code signing is a deferred non-goal.
+
 ## Commands
 
 PowerShell is the default shell on this machine. Run from the repo root. Common workflows live in the [Justfile](Justfile) — run `just` to see all recipes.
@@ -146,6 +160,7 @@ PowerShell is the default shell on this machine. Run from the repo root. Common 
 | `just get` | `flutter pub get` | Install deps after editing [pubspec.yaml](pubspec.yaml) |
 | `just analyze` | `flutter analyze` | Static analysis (lints + type errors) |
 | `just format` | `dart format .` | Format all Dart files |
+| `just format-check` | `dart format --output=none --set-exit-if-changed .` | Verify formatting without writing (the CI-safe counterpart to `format`) |
 | `just test` | `flutter test` | All widget/unit tests in `test/` |
 | `just mcp-smoke` | focused `flutter test` files | Workspace MCP package + MCP Status UI + user.db graceful-degrade smoke tests |
 | `just test-file <path>` | `flutter test <path>` | Single test file |
@@ -153,6 +168,7 @@ PowerShell is the default shell on this machine. Run from the repo root. Common 
 | `just run [device]` | `flutter run -d <device>` | Launch (default `windows`); `just devices` to list |
 | `just build <target>` | `flutter build <target>` | Release build (`apk`, `windows`, `web`, …) |
 | `just check` | format + analyze + test | Pre-commit gate |
+| `just ci` | format-check + analyze + test | The exact gate GitHub Actions runs — reproduces CI locally |
 | `just build-quran-db` | `dart run tool/build_quran_db.dart` | **Maintainer-only.** Rebuilds [assets/quran/quran.sqlite](assets/quran/quran.sqlite) + [assets/quran/manifest.json](assets/quran/manifest.json) from upstream Tanzil. Idempotent (byte-identical output). Commit both files together. |
 | `just build-tafsir-db` | `dart run tool/build_tafsir_db.dart` | **Maintainer-only.** Rebuilds [assets/tafsir/muyassar.sqlite](assets/tafsir/muyassar.sqlite) + [assets/tafsir/manifest.json](assets/tafsir/manifest.json) from `spa5k/tafsir_api` at the pinned commit SHA recorded in the tool source. Requires the Quran DB to already exist (the tool cross-checks every ayah key). Idempotent. Commit both files together. |
 

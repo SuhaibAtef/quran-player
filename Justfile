@@ -24,6 +24,10 @@ analyze:
 format:
     dart format .
 
+# Verify formatting without writing (the CI-safe counterpart to `format`)
+format-check:
+    dart format --output=none --set-exit-if-changed .
+
 # Run all widget/unit tests (host app + workspace packages)
 test:
     flutter test
@@ -61,6 +65,10 @@ clean:
 
 # Pre-commit gate: format, analyze, test
 check: format analyze test
+
+# CI gate: the exact format-check + analyze + test the GitHub workflow runs.
+# Unlike `check`, this verifies formatting without rewriting files.
+ci: format-check analyze test
 
 # Maintainer-only: rebuild assets/quran/quran.sqlite + manifest.json from upstream.
 # Requires network access. Idempotent: re-running produces a byte-identical DB.
