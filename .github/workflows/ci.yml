@@ -1,0 +1,64 @@
+name: CI
+
+# Runs the `just check` gate (format-check + analyze + test, host app plus the
+# quran_mcp_server and tarteel_qul workspace packages) on every pull request
+# targeting develop/main and on every push to those branches. See the
+# add-ci-cd-pipeline OpenSpec change for the design rationale.
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+# Least privilege: the check gate only reads the repository (decision D7).
+permissions:
+  contents: read
+
+# Cancel a superseded run on the same ref when a newer commit arrives.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned exact Flutter version (decision D7) so dart format / analyzer output
+  # is deterministic and matches developers' local SDK. Bump deliberately.
+  FLUTTER_VERSION: "3.41.9"
+
+jobs:
+  check:
+    # VM-based widget/unit tests are OS-agnostic, so the gate runs only on the
+    # fastest/cheapest runner (decision D2). Cross-OS compilation is proven by
+    # release.yml's build matrix instead.
+    name: format-check + analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up QUL mushaf assets
+        uses: ./.github/actions/setup-qul-assets
+
+      - name: Run CI gate (just ci)
+        run: just ci

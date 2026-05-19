@@ -1,0 +1,40 @@
+name: tarteel_qul
+description: >-
+  A Flutter rendering engine for Tarteel QUL (Quran Universal Library)
+  printed-mushaf data. Renders page-by-page mushaf layout, word-by-word glyph
+  scripts, and per-page fonts that the consumer supplies through a
+  MushafAssetSource abstraction. Bundles no QUL data or fonts.
+version: 0.1.0
+repository: https://github.com/SuhaibAtef/quran-player
+# `publish_to` is intentionally NOT set to 'none' — this package is structured
+# for pub.dev publication. It bundles no QUL data; see README.md.
+
+environment:
+  sdk: ^3.11.0
+
+# Resolved as a member of the Quran Companion Flutter workspace. A standalone
+# clone of just this package still resolves — the workspace marker is inert
+# outside a workspace root.
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Opens the QUL layout + word-script SQLite databases. The consumer hands the
+  # engine raw database bytes; the engine materialises them to a temp file and
+  # opens read-only via the FFI factory.
+  sqflite_common_ffi: ^2.3.3
+
+  # Path joining for the temp files the SQLite open path materialises.
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  # The engine ships no assets — rendering data reaches it only through a
+  # consumer-supplied MushafAssetSource.
+  uses-material-design: true

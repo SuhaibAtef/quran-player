@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "dataset": "tafsir-muyassar",
+  "source": {
+    "name": "al-Muyassar",
+    "publisher": "King Fahd Complex for the Printing of the Holy Quran",
+    "version": "King Fahd Complex Madinah-mushaf edition",
+    "url": "https://qurancomplex.gov.sa/",
+    "distribution": "Redistributed via spa5k/tafsir_api (MIT). Pinned to commit a3499db2c9a6381e77f72ddcc52fe644cab1a77a, slug ar-tafsir-muyassar.",
+    "fetchCommit": "a3499db2c9a6381e77f72ddcc52fe644cab1a77a",
+    "fetchEdition": "ar-tafsir-muyassar",
+    "license": "Tafsir text by the King Fahd Complex (free non-commercial redistribution with attribution). Redistribution layer: MIT (spa5k/tafsir_api).",
+    "retrievedAtUtc": "2026-05-14T15:04:19.222349Z"
+  },
+  "counts": {
+    "ayahs": 6236
+  },
+  "checksums": {
+    "dbSha256": "09e8aac113ac49599c58dc90feb5bec024f179471bb91f093ed68c6b942b2e8a",
+    "textSha256": "033a175166173fbcf6a26dd7771a543f511be88028bdc3131821e53f010ef385"
+  }
+}

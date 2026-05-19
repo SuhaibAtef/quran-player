@@ -17,3 +17,12 @@ Read alongside the [root CLAUDE.md](../CLAUDE.md). This file holds Windows-speci
 ## Distribution
 
 - No installer is wired up. When that lands (MSIX, Inno Setup, etc.), document the build steps here.
+
+## Foundation notes
+
+- Windows is the MVP target. The app launches via `flutter run -d windows` (`just run`) and renders the ForUI shell at the default window size — no custom sizing or DPI handling is configured in [runner/main.cpp](runner/main.cpp) yet. Adjust there if a feature needs a minimum window size or initial dimensions.
+- The desktop nav chrome ([lib/app/widgets/app_shell.dart](../lib/app/widgets/app_shell.dart)) switches to `FSidebar` at ≥768 wide; on Windows the default window is large enough that the sidebar is always shown.
+
+## Quran data layer
+
+- `sqflite_common_ffi` ships its own bundled SQLite native library on Windows; no system install required. The bundled `assets/quran/quran.sqlite` is materialised once into `getApplicationSupportDirectory()/quran/` on first launch (see [lib/data/quran/quran_database.dart](../lib/data/quran/quran_database.dart)) and re-materialised on app upgrade if the asset bytes differ. Wiping the support directory triggers a fresh integrity check on the next launch.
