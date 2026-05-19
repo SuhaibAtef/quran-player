@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
 import '../../../core/error/result.dart';
+import '../../../core/l10n/display_number.dart';
 import '../../../data/quran/providers.dart';
 import '../../../domain/quran/ayah.dart';
 import '../../../domain/quran/ayah_key.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../player/state/audio_player_controller.dart';
 import '../state/reading_position_controller.dart';
 import 'verse_action_menu.dart';
@@ -118,7 +120,9 @@ class _TextReaderViewState extends ConsumerState<TextReaderView> {
             }
             final result = snapshot.data;
             if (result == null) {
-              return _ErrorState(message: 'No data');
+              return _ErrorState(
+                message: AppLocalizations.of(context).readerNoData,
+              );
             }
             return switch (result) {
               Ok(:final value) => _AyahList(
@@ -190,6 +194,7 @@ class _AyahList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     onListReady();
     final activeAyah = ref.watch(activePlaybackAyahProvider);
+    final localeName = AppLocalizations.of(context).localeName;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: ListView.builder(
@@ -222,7 +227,7 @@ class _AyahList extends ConsumerWidget {
                   SizedBox(
                     width: 36,
                     child: Text(
-                      '${a.key.ayah}.',
+                      '${localizedNumber(a.key.ayah, localeName)}.',
                       textDirection: TextDirection.ltr,
                       textAlign: TextAlign.center,
                       style: context.theme.typography.sm.copyWith(
@@ -260,7 +265,7 @@ class _ErrorState extends StatelessWidget {
       key: TextReaderViewKeys.error,
       padding: const EdgeInsets.all(24),
       child: FAlert(
-        title: const Text("Couldn't load ayahs"),
+        title: Text(AppLocalizations.of(context).readerLoadAyahsErrorTitle),
         subtitle: Text(message),
       ),
     );

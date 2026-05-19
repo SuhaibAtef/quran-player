@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/route_names.dart';
 import '../../app/state/user_db_provider.dart';
+import '../../l10n/app_localizations.dart';
 import 'state/bookmark_rows.dart';
 import 'state/bookmarks_controller.dart';
 
@@ -34,8 +35,11 @@ class BookmarksPage extends ConsumerWidget {
     final health = ref.watch(userDbHealthProvider);
 
     return FScaffold(
-      header: const FHeader(
-        title: Text('Bookmarks', key: BookmarksPageKeys.title),
+      header: FHeader(
+        title: Text(
+          AppLocalizations.of(context).bookmarksTitle,
+          key: BookmarksPageKeys.title,
+        ),
       ),
       child: KeyedSubtree(
         key: BookmarksPageKeys.body,
@@ -87,7 +91,11 @@ class _BookmarksList extends ConsumerWidget {
             onPress: () => context.go(
               RoutePaths.readerAyahFor(row.key.surah, row.key.ayah),
             ),
-            title: Text('${row.key} · ${row.surahName}'),
+            title: Text(
+              AppLocalizations.of(
+                context,
+              ).bookmarkTileTitle('${row.key}', row.surahName),
+            ),
             subtitle: Text(
               row.ayahText,
               textDirection: TextDirection.rtl,
@@ -113,16 +121,16 @@ class _Loading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       key: BookmarksPageKeys.loading,
       child: SizedBox(
         width: 240,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            FProgress(),
-            SizedBox(height: 12),
-            Text('Loading bookmarks…'),
+            const FProgress(),
+            const SizedBox(height: 12),
+            Text(AppLocalizations.of(context).bookmarksLoading),
           ],
         ),
       ),
@@ -148,10 +156,13 @@ class _EmptyState extends StatelessWidget {
               color: context.theme.colors.mutedForeground,
             ),
             const SizedBox(height: 12),
-            Text('No bookmarks yet', style: context.theme.typography.lg),
+            Text(
+              AppLocalizations.of(context).bookmarksEmptyTitle,
+              style: context.theme.typography.lg,
+            ),
             const SizedBox(height: 8),
-            const Text(
-              'Tap the bookmark icon while reading to save an ayah here.',
+            Text(
+              AppLocalizations.of(context).bookmarksEmptyMessage,
               textAlign: TextAlign.center,
             ),
           ],
@@ -166,15 +177,14 @@ class _UnavailableNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       key: BookmarksPageKeys.unavailable,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: FAlert(
-        icon: Icon(FIcons.triangleAlert),
-        title: Text('Bookmarks unavailable'),
+        icon: const Icon(FIcons.triangleAlert),
+        title: Text(AppLocalizations.of(context).bookmarksUnavailableTitle),
         subtitle: Text(
-          'Local storage could not be opened, so bookmarks are off this '
-          'session. Reading and audio are unaffected.',
+          AppLocalizations.of(context).bookmarksUnavailableMessage,
         ),
       ),
     );
@@ -193,7 +203,7 @@ class _ErrorState extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: FAlert(
         icon: const Icon(FIcons.triangleAlert),
-        title: const Text("Couldn't load bookmarks"),
+        title: Text(AppLocalizations.of(context).bookmarksLoadErrorTitle),
         subtitle: Text(message),
       ),
     );

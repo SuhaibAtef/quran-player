@@ -8,6 +8,7 @@ import '../../data/quran/mushaf_locator_provider.dart';
 import '../../data/quran/providers.dart';
 import '../../domain/quran/ayah_key.dart';
 import '../../domain/quran/mushaf_locator.dart';
+import '../../l10n/app_localizations.dart';
 import 'state/reading_position_controller.dart';
 import 'widgets/page_mushaf_view.dart';
 import 'widgets/text_reader_view.dart';
@@ -85,7 +86,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 context.go('/');
               }
             },
-            child: const Icon(FIcons.chevronLeft),
+            child: Icon(
+              Directionality.of(context) == TextDirection.rtl
+                  ? FIcons.chevronRight
+                  : FIcons.chevronLeft,
+            ),
           ),
         ],
       ),
@@ -105,16 +110,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   Widget _buildPageReader(PageReaderTarget target) {
     final engineAsync = ref.watch(mushafEngineProvider);
     return engineAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         key: ReaderScreenKeys.loading,
         child: SizedBox(
           width: 240,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              FProgress(),
-              SizedBox(height: 12),
-              Text('Preparing the mushaf…'),
+              const FProgress(),
+              const SizedBox(height: 12),
+              Text(AppLocalizations.of(context).readerPreparingMushaf),
             ],
           ),
         ),
@@ -192,10 +197,11 @@ class _ReaderTitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final small = context.theme.typography.sm;
     if (target is PageReaderTarget) {
       return Text(
-        'Page $currentPage of $kMushafPageCount',
+        l10n.readerPageTitle(currentPage, kMushafPageCount),
         key: ReaderScreenKeys.titleLabel,
         style: small,
       );
@@ -208,9 +214,14 @@ class _ReaderTitle extends ConsumerWidget {
         final result = snap.data;
         final label = switch (result) {
           Ok(:final value) =>
-            'Surah $surahNumber · ${value.nameLatin}'
-                '${target.anchor != null ? ' · Ayah ${target.anchor!.ayah}' : ''}',
-          _ => 'Surah $surahNumber',
+            target.anchor != null
+                ? l10n.readerSurahAyahTitle(
+                    surahNumber,
+                    value.nameLatin,
+                    target.anchor!.ayah,
+                  )
+                : l10n.readerSurahTitle(surahNumber, value.nameLatin),
+          _ => l10n.readerSurahShortTitle(surahNumber),
         };
         return Text(label, key: ReaderScreenKeys.titleLabel, style: small);
       },
@@ -228,8 +239,8 @@ class _FallbackBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: FAlert(
         icon: const Icon(FIcons.triangleAlert),
-        title: const Text('Mushaf rendering unavailable'),
-        subtitle: const Text('Showing plain text. Try restarting the app.'),
+        title: Text(AppLocalizations.of(context).readerFallbackTitle),
+        subtitle: Text(AppLocalizations.of(context).readerFallbackBody),
       ),
     );
   }

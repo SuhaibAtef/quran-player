@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
+import '../../app/state/locale_provider.dart';
 import '../../app/state/mcp_settings_provider.dart';
 import '../../app/state/mushaf_color_scheme.dart';
 import '../../app/state/reader_mode.dart';
@@ -14,6 +15,7 @@ import '../../data/audio/quran_com_audio_source.dart';
 import '../../data/quran/mushaf_locator_provider.dart';
 import '../../domain/quran/quran_source.dart';
 import '../../domain/tafsir/tafsir_source.dart';
+import '../../l10n/app_localizations.dart';
 import '../reader/widgets/page_mushaf_view.dart' show MushafStylePreview;
 import 'state/quran_source_provider.dart';
 import 'state/tafsir_source_provider.dart';
@@ -28,6 +30,10 @@ class SettingsPageKeys {
   static const themeOptionDark = Key('settings.theme.dark');
   static const themeOptionSystem = Key('settings.theme.system');
   static const darkOnlyMarker = Key('settings.dark_only_marker');
+  static const languageSection = Key('settings.language_section');
+  static const languageOptionSystem = Key('settings.language.system');
+  static const languageOptionEnglish = Key('settings.language.english');
+  static const languageOptionArabic = Key('settings.language.arabic');
   static const readerSection = Key('settings.reader_section');
   static const readerOptionPage = Key('settings.reader.page');
   static const readerOptionText = Key('settings.reader.text');
@@ -66,10 +72,11 @@ class SettingsPage extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
     final controller = ref.read(themeModeProvider.notifier);
     final brightness = context.theme.colors.brightness;
+    final l10n = AppLocalizations.of(context);
 
     return FScaffold(
-      header: const FHeader(
-        title: Text('Settings', key: SettingsPageKeys.title),
+      header: FHeader(
+        title: Text(l10n.settingsTitle, key: SettingsPageKeys.title),
       ),
       // A SingleChildScrollView + Column (not a lazy ListView) so every
       // section is mounted regardless of scroll position — keeps section
@@ -85,11 +92,11 @@ class SettingsPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      'Theme',
-                      style: TextStyle(
+                      l10n.settingsThemeSection,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -97,19 +104,19 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _ThemeOptionTile(
                     optionKey: SettingsPageKeys.themeOptionSystem,
-                    label: 'System',
+                    label: l10n.settingsThemeSystem,
                     selected: mode == ThemeMode.system,
                     onPress: () => controller.setMode(ThemeMode.system),
                   ),
                   _ThemeOptionTile(
                     optionKey: SettingsPageKeys.themeOptionLight,
-                    label: 'Light',
+                    label: l10n.settingsThemeLight,
                     selected: mode == ThemeMode.light,
                     onPress: () => controller.setMode(ThemeMode.light),
                   ),
                   _ThemeOptionTile(
                     optionKey: SettingsPageKeys.themeOptionDark,
-                    label: 'Dark',
+                    label: l10n.settingsThemeDark,
                     selected: mode == ThemeMode.dark,
                     onPress: () => controller.setMode(ThemeMode.dark),
                   ),
@@ -118,6 +125,8 @@ class SettingsPage extends ConsumerWidget {
             ),
             if (brightness == Brightness.dark)
               const SizedBox(key: SettingsPageKeys.darkOnlyMarker, height: 1),
+            const SizedBox(height: 16),
+            const _LanguageSection(),
             const SizedBox(height: 16),
             const _ReaderModeSection(),
             const SizedBox(height: 16),
@@ -148,6 +157,7 @@ class _McpSection extends ConsumerWidget {
     final controller = ref.read(mcpSettingsControllerProvider.notifier);
     final auditAsync = ref.watch(userDbStateProvider);
     final small = context.theme.typography.sm;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       key: SettingsPageKeys.mcpSection,
@@ -155,24 +165,20 @@ class _McpSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'MCP server',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              l10n.settingsMcpSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
-          const Text(
-            'Loopback-only HTTP server that lets local MCP clients query the '
-            'Quran corpus and (when granted) control playback. Disable to '
-            'stop the server entirely.',
-          ),
+          Text(l10n.settingsMcpDescription),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                const Expanded(child: Text('Enable MCP')),
+                Expanded(child: Text(l10n.settingsMcpEnable)),
                 FSwitch(
                   key: SettingsPageKeys.mcpEnableSwitch,
                   value: settings.enabled,
@@ -185,17 +191,15 @@ class _McpSection extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Allow MCP playback control'),
-                      SizedBox(height: 2),
+                      Text(l10n.settingsMcpPlaybackTitle),
+                      const SizedBox(height: 2),
                       Text(
-                        'Grants Mode B tools (play/pause/seek). When off, '
-                        'playback tools return scope_denied without changing '
-                        'player state.',
-                        style: TextStyle(fontSize: 12),
+                        l10n.settingsMcpPlaybackDescription,
+                        style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -214,16 +218,15 @@ class _McpSection extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Allow MCP bookmark access'),
-                      SizedBox(height: 2),
+                      Text(l10n.settingsMcpBookmarkTitle),
+                      const SizedBox(height: 2),
                       Text(
-                        'Reserved for future bookmark tools. Toggle has no '
-                        'effect today.',
-                        style: TextStyle(fontSize: 12),
+                        l10n.settingsMcpBookmarkDescription,
+                        style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -246,7 +249,7 @@ class _McpSection extends ConsumerWidget {
                 variant: FButtonVariant.outline,
                 onPress: () => _confirmClearAudit(context, ref),
                 prefix: const Icon(FIcons.eraser),
-                child: const Text('Clear MCP audit log'),
+                child: Text(l10n.settingsMcpClearAudit),
               ),
             ],
           ),
@@ -254,7 +257,7 @@ class _McpSection extends ConsumerWidget {
           auditAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (e, st) => Text(
-              'Audit log status: $e',
+              l10n.settingsMcpAuditStatus('$e'),
               key: SettingsPageKeys.mcpUserDbNotice,
               style: small,
             ),
@@ -263,9 +266,7 @@ class _McpSection extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    'MCP audit log unavailable — restart the app or check '
-                    'disk permissions. The Quran reader and audio player are '
-                    'unaffected.',
+                    l10n.settingsMcpAuditUnavailable,
                     key: SettingsPageKeys.mcpUserDbNotice,
                     style: small,
                   ),
@@ -282,22 +283,21 @@ class _McpSection extends ConsumerWidget {
   Future<void> _confirmClearAudit(BuildContext context, WidgetRef ref) async {
     final repo = ref.read(auditLogRepositoryProvider);
     if (repo == null) return;
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => FDialog(
-        title: const Text('Clear MCP audit log?'),
-        body: const Text(
-          'This deletes every recorded MCP tool call. Cannot be undone.',
-        ),
+        title: Text(l10n.settingsMcpClearAuditDialogTitle),
+        body: Text(l10n.settingsMcpClearAuditDialogBody),
         actions: [
           FButton(
             variant: FButtonVariant.outline,
             onPress: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.settingsCancel),
           ),
           FButton(
             onPress: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Clear'),
+            child: Text(l10n.settingsClear),
           ),
         ],
       ),
@@ -322,11 +322,11 @@ class _AudioAttributionSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Audio source',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              AppLocalizations.of(context).settingsAudioSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
           Text(
@@ -335,7 +335,9 @@ class _AudioAttributionSection extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Default reciter: ${reciter.name} (${reciter.style})',
+            AppLocalizations.of(
+              context,
+            ).settingsAudioDefaultReciter(reciter.name, reciter.style),
             style: small,
           ),
           Text(source.terms, style: small),
@@ -360,24 +362,72 @@ class _ReaderModeSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Reader',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              AppLocalizations.of(context).settingsReaderSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
           _ReaderModeTile(
             optionKey: SettingsPageKeys.readerOptionPage,
-            label: 'Mushaf page (recommended)',
+            label: AppLocalizations.of(context).settingsReaderModePage,
             selected: mode == ReaderMode.page,
             onPress: () => controller.setMode(ReaderMode.page),
           ),
           _ReaderModeTile(
             optionKey: SettingsPageKeys.readerOptionText,
-            label: 'Plain text scroll',
+            label: AppLocalizations.of(context).settingsReaderModeText,
             selected: mode == ReaderMode.text,
             onPress: () => controller.setMode(ReaderMode.text),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Interface-language picker — System / English / العربية, persisted via
+/// `localeProvider`. Mirrors the theme picker above it.
+class _LanguageSection extends ConsumerWidget {
+  const _LanguageSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final option = ref.watch(localeProvider);
+    final controller = ref.read(localeProvider.notifier);
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      key: SettingsPageKeys.languageSection,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              l10n.settingsLanguageSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          _ThemeOptionTile(
+            optionKey: SettingsPageKeys.languageOptionSystem,
+            label: l10n.settingsLanguageSystem,
+            selected: option == AppLocaleOption.system,
+            onPress: () => controller.setOption(AppLocaleOption.system),
+          ),
+          _ThemeOptionTile(
+            optionKey: SettingsPageKeys.languageOptionEnglish,
+            label: l10n.settingsLanguageEnglish,
+            selected: option == AppLocaleOption.english,
+            onPress: () => controller.setOption(AppLocaleOption.english),
+          ),
+          _ThemeOptionTile(
+            optionKey: SettingsPageKeys.languageOptionArabic,
+            label: l10n.settingsLanguageArabic,
+            selected: option == AppLocaleOption.arabic,
+            onPress: () => controller.setOption(AppLocaleOption.arabic),
           ),
         ],
       ),
@@ -404,11 +454,11 @@ class _MushafAppearanceSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Mushaf colours',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              AppLocalizations.of(context).settingsMushafColoursSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
           ClipRRect(
@@ -443,12 +493,12 @@ class _PreviewUnavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFEDE6D6),
+    return ColoredBox(
+      color: const Color(0xFFEDE6D6),
       child: Center(
         child: Text(
-          'Mushaf preview unavailable',
-          style: TextStyle(fontSize: 12, color: Color(0xFF6B6B6B)),
+          AppLocalizations.of(context).settingsMushafPreviewUnavailable,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF6B6B6B)),
         ),
       ),
     );
@@ -498,30 +548,28 @@ class _MushafAttributionSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Mushaf page rendering',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              AppLocalizations.of(context).settingsMushafSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
-          const Text(
-            'Tarteel QUL — QPC V4',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            AppLocalizations.of(context).settingsMushafProvider,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 2),
           Text(
-            'Mushaf page layout and word-by-word glyph script from the '
-            'Tarteel Quran Universal Library (qul.tarteel.ai).',
+            AppLocalizations.of(context).settingsMushafDescription1,
             style: small,
           ),
           Text(
-            'Rendered with KFGQPC (King Fahd Glorious Qur’an Printing '
-            'Complex) V4 per-page fonts.',
+            AppLocalizations.of(context).settingsMushafDescription2,
             style: small,
           ),
           Text(
-            'Layout and glyphs only — canonical text comes from Tanzil above.',
+            AppLocalizations.of(context).settingsMushafDescription3,
             style: small,
           ),
         ],
@@ -542,11 +590,11 @@ class _QuranSourceSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Quran source',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              AppLocalizations.of(context).settingsQuranSourceSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
           async.when(
@@ -554,11 +602,15 @@ class _QuranSourceSection extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: FProgress(),
             ),
-            error: (e, st) => Text("Couldn't load attribution: $e"),
+            error: (e, st) => Text(
+              AppLocalizations.of(context).settingsAttributionLoadError('$e'),
+            ),
             data: (result) => switch (result) {
               Ok(:final value) => _QuranSourceCard(source: value),
               Err(:final failure) => Text(
-                "Couldn't load attribution: ${failure.message}",
+                AppLocalizations.of(
+                  context,
+                ).settingsAttributionLoadError(failure.message),
               ),
             },
           ),
@@ -591,7 +643,7 @@ class _QuranSourceCard extends StatelessWidget {
           style: smallStyle,
         ),
         Text(
-          'Version ${source.version}',
+          AppLocalizations.of(context).settingsVersionLabel(source.version),
           key: SettingsPageKeys.sourceVersion,
           style: smallStyle,
         ),
@@ -620,11 +672,11 @@ class _TafsirSourceSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Tafsir source',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              AppLocalizations.of(context).settingsTafsirSourceSection,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
           async.when(
@@ -632,11 +684,15 @@ class _TafsirSourceSection extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: FProgress(),
             ),
-            error: (e, st) => Text("Couldn't load attribution: $e"),
+            error: (e, st) => Text(
+              AppLocalizations.of(context).settingsAttributionLoadError('$e'),
+            ),
             data: (result) => switch (result) {
               Ok(:final value) => _TafsirSourceCard(source: value),
               Err(:final failure) => Text(
-                "Couldn't load attribution: ${failure.message}",
+                AppLocalizations.of(
+                  context,
+                ).settingsAttributionLoadError(failure.message),
               ),
             },
           ),
@@ -669,7 +725,7 @@ class _TafsirSourceCard extends StatelessWidget {
           style: smallStyle,
         ),
         Text(
-          'Version ${source.version}',
+          AppLocalizations.of(context).settingsVersionLabel(source.version),
           key: SettingsPageKeys.tafsirVersion,
           style: smallStyle,
         ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 
 import '../../app/state/app_bootstrap_status_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 class DataIntegrityScreenKeys {
   const DataIntegrityScreenKeys._();
@@ -20,13 +21,14 @@ class DataIntegrityScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(appBootstrapStatusProvider);
     final dataset = status.failingDataset ?? 'Quran';
-    final detail = status.failure?.message ?? 'unknown';
+    final l10n = AppLocalizations.of(context);
+    final detail = status.failure?.message ?? l10n.dataIntegrityUnknownDetail;
 
     return FScaffold(
       key: DataIntegrityScreenKeys.root,
       header: FHeader(
         title: Text(
-          "$dataset data couldn't be verified",
+          l10n.dataIntegrityTitle(dataset),
           key: DataIntegrityScreenKeys.title,
         ),
       ),
@@ -36,13 +38,14 @@ class DataIntegrityScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'The bundled $dataset database failed an integrity check at '
-              'startup. To preserve trust in the text, the app refuses to '
-              'serve any data until the issue is resolved.',
+              l10n.dataIntegrityBody(dataset),
               key: DataIntegrityScreenKeys.dataset,
             ),
             const SizedBox(height: 16),
-            Text('Detail:', style: context.theme.typography.sm),
+            Text(
+              l10n.dataIntegrityDetailLabel,
+              style: context.theme.typography.sm,
+            ),
             const SizedBox(height: 4),
             Text(
               detail,
@@ -50,10 +53,7 @@ class DataIntegrityScreen extends ConsumerWidget {
               style: context.theme.typography.sm,
             ),
             const SizedBox(height: 24),
-            Text(
-              'Try reinstalling the app, or run `just build-${dataset.toLowerCase()}-db` '
-              'if you are working from source.',
-            ),
+            Text(l10n.dataIntegrityHint(dataset.toLowerCase())),
           ],
         ),
       ),

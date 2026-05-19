@@ -5,6 +5,7 @@ import 'package:quran_mcp_server/quran_mcp_server.dart';
 
 import '../../app/state/mcp_server_provider.dart';
 import '../../app/state/mcp_settings_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 class McpStatusPageKeys {
   const McpStatusPageKeys._();
@@ -32,10 +33,11 @@ class McpStatusPage extends ConsumerWidget {
     final small = context.theme.typography.sm;
     final starting = status.lifecycle == McpServerLifecycle.starting;
     final running = status.lifecycle == McpServerLifecycle.running;
+    final l10n = AppLocalizations.of(context);
 
     return FScaffold(
-      header: const FHeader(
-        title: Text('MCP Status', key: McpStatusPageKeys.title),
+      header: FHeader(
+        title: Text(l10n.mcpStatusTitle, key: McpStatusPageKeys.title),
       ),
       child: SingleChildScrollView(
         key: McpStatusPageKeys.body,
@@ -44,9 +46,11 @@ class McpStatusPage extends ConsumerWidget {
           children: [
             _Section(
               key: McpStatusPageKeys.lifecycle,
-              title: 'Server',
+              title: l10n.mcpStatusServerSection,
               children: [
-                Text('State: ${_lifecycleLabel(status.lifecycle)}'),
+                Text(
+                  l10n.mcpStatusState(_lifecycleLabel(status.lifecycle, l10n)),
+                ),
                 if (status.message != null) Text(status.message!),
                 const SizedBox(height: 8),
                 Row(
@@ -55,14 +59,14 @@ class McpStatusPage extends ConsumerWidget {
                       FButton(
                         onPress: starting ? null : controller.start,
                         prefix: const Icon(FIcons.play),
-                        child: const Text('Start MCP Server'),
+                        child: Text(l10n.mcpStatusStartButton),
                       )
                     else
                       FButton(
                         variant: FButtonVariant.outline,
                         onPress: controller.stop,
                         prefix: const Icon(FIcons.square),
-                        child: const Text('Stop MCP Server'),
+                        child: Text(l10n.mcpStatusStopButton),
                       ),
                   ],
                 ),
@@ -70,29 +74,22 @@ class McpStatusPage extends ConsumerWidget {
             ),
             _Section(
               key: McpStatusPageKeys.localOnly,
-              title: 'Transport',
+              title: l10n.mcpStatusTransportSection,
               children: [
-                const Text(
-                  'Local-only HTTP MCP transport on the loopback interface. '
-                  'Bearer-token auth gates every request before mcp_dart sees it.',
-                ),
+                Text(l10n.mcpStatusTransportLine1),
                 const SizedBox(height: 2),
-                const Text(
-                  'Remote access, filesystem tools, and shell commands are not '
-                  'exposed. Use the URL and bearer token with a local MCP client '
-                  'while this app is running.',
-                ),
+                Text(l10n.mcpStatusTransportLine2),
                 if (status.uri != null && status.authToken != null) ...[
                   const SizedBox(height: 8),
                   _ConnectionValueField(
                     key: McpStatusPageKeys.uri,
-                    label: 'URL',
+                    label: l10n.mcpStatusUrlLabel,
                     value: '${status.uri}',
                   ),
                   const SizedBox(height: 2),
                   _ConnectionValueField(
                     key: McpStatusPageKeys.token,
-                    label: 'Token',
+                    label: l10n.mcpStatusTokenLabel,
                     value: status.authToken!,
                   ),
                 ],
@@ -100,25 +97,32 @@ class McpStatusPage extends ConsumerWidget {
             ),
             _Section(
               key: McpStatusPageKeys.scopes,
-              title: 'Active scopes',
+              title: l10n.mcpStatusScopesSection,
               children: [
                 if (!settings.enabled)
-                  const Text(
-                    'MCP is disabled. Enable it in Settings to grant scopes.',
-                  )
+                  Text(l10n.mcpStatusScopesDisabled)
                 else ...[
-                  Text('readonly: on (master toggle implies)'),
-                  Text('playback: ${settings.scopePlayback ? 'on' : 'off'}'),
+                  Text(l10n.mcpStatusScopeReadonly),
                   Text(
-                    'bookmark: ${settings.scopeBookmark ? 'on' : 'off'} '
-                    '(reserved — no tools gate on this yet)',
+                    l10n.mcpStatusScopePlayback(
+                      settings.scopePlayback
+                          ? l10n.mcpStatusOn
+                          : l10n.mcpStatusOff,
+                    ),
+                  ),
+                  Text(
+                    l10n.mcpStatusScopeBookmark(
+                      settings.scopeBookmark
+                          ? l10n.mcpStatusOn
+                          : l10n.mcpStatusOff,
+                    ),
                   ),
                 ],
               ],
             ),
             _Section(
               key: McpStatusPageKeys.tools,
-              title: 'Tools (${mcpToolDefinitions.length})',
+              title: l10n.mcpStatusToolsSection(mcpToolDefinitions.length),
               children: [
                 Text(
                   mcpToolDefinitions.map((t) => t.name).join(', '),
@@ -128,7 +132,9 @@ class McpStatusPage extends ConsumerWidget {
             ),
             _Section(
               key: McpStatusPageKeys.resources,
-              title: 'Resources (${mcpResourceDefinitions.length})',
+              title: l10n.mcpStatusResourcesSection(
+                mcpResourceDefinitions.length,
+              ),
               children: [
                 Text(
                   mcpResourceDefinitions.map((r) => r.uri).join(', '),
@@ -151,18 +157,18 @@ class _RecentAuditSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(mcpRecentAuditProvider);
     final small = context.theme.typography.sm;
+    final l10n = AppLocalizations.of(context);
     return _Section(
       key: McpStatusPageKeys.recent,
-      title: 'Recent audit log (last 20)',
+      title: l10n.mcpStatusRecentSection,
       children: [
         async.when(
           loading: () => const FProgress(),
-          error: (e, st) => Text('Could not load audit log: $e', style: small),
+          error: (e, st) =>
+              Text(l10n.mcpStatusAuditLoadError('$e'), style: small),
           data: (rows) {
             if (rows.isEmpty) {
-              return const Text(
-                'No MCP activity yet, or audit log unavailable.',
-              );
+              return Text(l10n.mcpStatusAuditEmpty);
             }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,12 +250,12 @@ class _Section extends StatelessWidget {
   }
 }
 
-String _lifecycleLabel(McpServerLifecycle lifecycle) {
+String _lifecycleLabel(McpServerLifecycle lifecycle, AppLocalizations l10n) {
   return switch (lifecycle) {
-    McpServerLifecycle.disabled => 'disabled',
-    McpServerLifecycle.starting => 'starting',
-    McpServerLifecycle.running => 'running',
-    McpServerLifecycle.stopped => 'stopped',
-    McpServerLifecycle.failed => 'failed',
+    McpServerLifecycle.disabled => l10n.mcpLifecycleDisabled,
+    McpServerLifecycle.starting => l10n.mcpLifecycleStarting,
+    McpServerLifecycle.running => l10n.mcpLifecycleRunning,
+    McpServerLifecycle.stopped => l10n.mcpLifecycleStopped,
+    McpServerLifecycle.failed => l10n.mcpLifecycleFailed,
   };
 }

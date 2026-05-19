@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class SurahDetailPageKeys {
   const SurahDetailPageKeys._();
 
@@ -15,13 +17,17 @@ class SurahDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return FScaffold(
       header: FHeader.nested(
-        title: Text('Surah $surahId', key: SurahDetailPageKeys.title),
+        title: Text(
+          l10n.surahDetailTitle(surahId),
+          key: SurahDetailPageKeys.title,
+        ),
       ),
       child: Center(
         key: SurahDetailPageKeys.body,
-        child: Text('Ayahs for surah $surahId will render here.'),
+        child: Text(l10n.surahDetailPlaceholder(surahId)),
       ),
     );
   }

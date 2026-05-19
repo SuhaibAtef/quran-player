@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router/route_names.dart';
 import '../../domain/quran/quran_search_result.dart';
+import '../../l10n/app_localizations.dart';
 import 'state/quran_search_controller.dart';
 
 class SearchPageKeys {
@@ -54,9 +55,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(quranSearchProvider);
+    final l10n = AppLocalizations.of(context);
 
     return FScaffold(
-      header: const FHeader(title: Text('Search', key: SearchPageKeys.title)),
+      header: FHeader(title: Text(l10n.searchTitle, key: SearchPageKeys.title)),
       child: KeyedSubtree(
         key: SearchPageKeys.body,
         child: Column(
@@ -73,7 +75,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       control: FTextFieldControl.managed(
                         controller: _controller,
                       ),
-                      hint: 'Search Arabic Quran text',
+                      hint: l10n.searchHint,
                       textInputAction: TextInputAction.search,
                       textDirection: TextDirection.rtl,
                       onSubmit: (_) => _submit(),
@@ -84,7 +86,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     key: SearchPageKeys.submit,
                     onPress: state.isLoading ? null : _submit,
                     prefix: const Icon(FIcons.search),
-                    child: const Text('Search'),
+                    child: Text(l10n.searchButton),
                   ),
                 ],
               ),
@@ -104,25 +106,26 @@ class _SearchBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return switch (state.status) {
-      QuranSearchStatus.idle => const _MessageState(
+      QuranSearchStatus.idle => _MessageState(
         key: SearchPageKeys.idle,
-        title: 'Search the Quran',
-        message: 'Enter Arabic text to find matching ayahs.',
+        title: l10n.searchIdleTitle,
+        message: l10n.searchIdleMessage,
       ),
       QuranSearchStatus.loading => const _LoadingState(),
       QuranSearchStatus.empty => _MessageState(
         key: SearchPageKeys.empty,
-        title: 'No matches',
-        message: 'No ayahs matched "${state.query}".',
+        title: l10n.searchEmptyTitle,
+        message: l10n.searchEmptyMessage(state.query),
       ),
       QuranSearchStatus.invalid => _MessageState(
         key: SearchPageKeys.error,
-        title: 'Search query needed',
-        message: state.message ?? 'Enter Arabic text to search.',
+        title: l10n.searchInvalidTitle,
+        message: state.message ?? l10n.searchInvalidMessage,
       ),
       QuranSearchStatus.failure => _FailureState(
-        message: state.failure?.message ?? 'Search failed.',
+        message: state.failure?.message ?? l10n.searchFailureFallback,
       ),
       QuranSearchStatus.results => _ResultsList(results: state.results),
     };
@@ -140,10 +143,10 @@ class _LoadingState extends StatelessWidget {
         width: 240,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            FProgress(),
-            SizedBox(height: 12),
-            Text('Searching…'),
+          children: [
+            const FProgress(),
+            const SizedBox(height: 12),
+            Text(AppLocalizations.of(context).searchLoading),
           ],
         ),
       ),
@@ -186,7 +189,7 @@ class _FailureState extends StatelessWidget {
       key: SearchPageKeys.error,
       padding: const EdgeInsets.all(16),
       child: FAlert(
-        title: const Text("Couldn't search the Quran"),
+        title: Text(AppLocalizations.of(context).searchFailureTitle),
         subtitle: Text(message),
       ),
     );
@@ -212,7 +215,11 @@ class _ResultsList extends StatelessWidget {
             onPress: () => context.go(
               RoutePaths.readerAyahFor(result.key.surah, result.key.ayah),
             ),
-            title: Text('${result.key} · ${result.surahNameLatin}'),
+            title: Text(
+              AppLocalizations.of(
+                context,
+              ).searchResultTitle('${result.key}', result.surahNameLatin),
+            ),
             subtitle: Text(
               '${result.surahNameArabic}\n${result.text}',
               textDirection: TextDirection.rtl,
