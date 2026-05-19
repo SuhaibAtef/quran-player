@@ -22,6 +22,20 @@ The goal is to create a modern desktop Quran application that combines:
 
 The app should not be a generic AI religious assistant. It should be a Quran Player first, with MCP as a controlled integration layer.
 
+## App Modes
+
+From V1 onward, Quran Companion is organized into **modes**, chosen from a custom title bar. Each mode reshapes the workspace — its navigation, and what tapping the Quran text does — around a single task.
+
+```text
+Reader     Read and listen to the Quran. The MVP app is Reader mode.
+Teacher    A human teacher marks a student's recitation mistakes.
+Memorize   AI-assisted memorization checking. Deferred — see "Beyond V1".
+```
+
+The mode system is built so new modes can be added without reshaping the app shell. V1 ships **Reader** and **Teacher**; **Memorize** is a reserved slot, not yet built.
+
+This does not weaken the core principle. Quran Companion stays a Quran Player first: Teacher mode is a marking tool operated by a human teacher, not an AI assistant, and the future Memorize mode only checks recitation correctness. No mode issues religious rulings or generates Quran content.
+
 ## Target Platforms
 
 Initial target:
@@ -111,18 +125,57 @@ The first version should include:
 
 ### V1 Features
 
-After the MVP, add:
+The MVP is delivered. Verse-by-verse playback, MCP playback controls, and the in-app MCP audit log shipped alongside it. V1 builds on that foundation, grouped by area:
+
+**Foundations**
+
+* Localization and full right-to-left (RTL) layout support.
+* A design rework across navigation, the player and queue, context menus, and the mushaf layout.
+
+**App shell**
+
+* A custom title bar replacing the OS title bar, carrying the mode switcher.
+* Multiple modes — Reader and Teacher (see "App Modes").
+* Minimize to the system tray.
+* Settings reorganized into focused pages, including a dedicated MCP page.
+
+**Reader**
+
+* Multiple reader views — continuous text, single mushaf page, and two mushaf pages.
+* Navigation by Juz, Hizb, and other divisions, not only the surah list.
+* Richer Quran rendering with Juz, Hizb, and surah-name detail.
+* A native-style context menu when an ayah is clicked.
+* An always-on-top mini player overlay.
+
+**Audio**
 
 * Multiple reciters.
 * Offline audio downloads.
-* Verse-by-verse playback.
 * Repeat ayah, surah, or range.
 * Playback speed control.
-* Search improvements.
+
+**Teacher mode**
+
+* Human-to-human recitation marking — a teacher marks Tajweed and pronunciation mistakes letter by letter.
+* A mistake report generated at the end of a session.
+
+**Content and search**
+
+* Multiple tafsir sources, with a tafsir reader view.
+* A download manager for optional extra content such as tafsir.
+* Semantic search.
 * Translation support, only with verified licensing.
-* MCP playback controls.
+
+**MCP**
+
+* Remote MCP access, opt-in and off by default, usable through a tunnel such as ngrok.
+* OAuth replacing the session bearer token.
+* Compatibility with hosted AI desktop apps, including ChatGPT Desktop and Claude Desktop.
 * MCP bookmark tools.
-* In-app MCP audit log.
+
+**Distribution**
+
+* GitHub CI/CD producing releases when changes merge to the main branch.
 * Desktop packaging for Windows, macOS, and Linux.
 
 ## MCP Purpose
@@ -152,6 +205,8 @@ In-app Local Quran MCP Server
   ↕ app bridge
 Flutter Quran Player
 ```
+
+V1 evolves this. The server stays loopback-only by default, but adds an explicit, opt-in remote mode — reachable through a tunnel such as ngrok and authenticated with OAuth instead of the session bearer token — so hosted AI desktop apps like ChatGPT Desktop and Claude Desktop can connect. Remote access is off by default and clearly warned in the UI. See "Safety Rules".
 
 The server should support two modes:
 
@@ -205,7 +260,7 @@ The project must follow these rules:
 * Translations and tafsir must only be added with clear licensing and attribution.
 * MCP must be disabled or read-only by default.
 * Playback control through MCP must require user approval.
-* The app must not expose remote MCP access in the MVP.
+* Remote MCP access stays off by default. The MVP never exposed it; V1 may, but only as an explicit opt-in setting, authenticated with OAuth, and clearly warned in the UI. Loopback-only stays the default.
 * The MCP server must not allow arbitrary file access.
 * The MCP server must not allow shell command execution.
 * Secrets must not be stored in the Flutter client.
@@ -310,6 +365,12 @@ Mac App Store release
 Linux Snap release
 Automatic religious rulings
 ```
+
+## Beyond V1
+
+Some directions are intentionally deferred past V1:
+
+* **Memorize mode** — AI-assisted memorization checking. A local model listens to a user's recitation, flags mistakes, and offers reference playback. This depends on reliable Quranic-Arabic speech recognition and a bundled local model; both are large efforts left to a later major version. The V1 mode system only reserves the slot.
 
 ## Project Principle
 
