@@ -13,6 +13,7 @@ import 'package:quran_player/features/reader/widgets/text_reader_view.dart';
 
 import '../../_fakes/fake_audio_repository.dart';
 import '../../_fakes/fake_quran_repository.dart';
+import '../../_support/localized.dart';
 
 Future<void> _pump(WidgetTester tester) async {
   final ayahs = {
@@ -30,22 +31,24 @@ Future<void> _pump(WidgetTester tester) async {
           FakeAudioPlaybackEngine(),
         ),
       ],
-      child: FTheme(
-        data: AppTheme.light,
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Consumer(
-            builder: (context, ref, _) => Column(
-              children: [
-                FButton(
-                  key: const Key('start-ayah'),
-                  onPress: () => ref
-                      .read(audioPlayerControllerProvider.notifier)
-                      .startAyah(AyahKey(1, 2)),
-                  child: const Text('Start'),
-                ),
-                const Expanded(child: TextReaderView(surahNumber: 1)),
-              ],
+      child: localized(
+        FTheme(
+          data: AppTheme.light,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Consumer(
+              builder: (context, ref, _) => Column(
+                children: [
+                  FButton(
+                    key: const Key('start-ayah'),
+                    onPress: () => ref
+                        .read(audioPlayerControllerProvider.notifier)
+                        .startAyah(AyahKey(1, 2)),
+                    child: const Text('Start'),
+                  ),
+                  const Expanded(child: TextReaderView(surahNumber: 1)),
+                ],
+              ),
             ),
           ),
         ),

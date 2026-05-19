@@ -11,6 +11,7 @@ import 'package:quran_player/features/player/widgets/mini_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../_fakes/fake_audio_repository.dart';
+import '../../_support/localized.dart';
 
 Future<void> _pump(WidgetTester tester, FakeAudioPlaybackEngine engine) async {
   SharedPreferences.setMockInitialValues({});
@@ -22,22 +23,24 @@ Future<void> _pump(WidgetTester tester, FakeAudioPlaybackEngine engine) async {
         audioRepositoryProvider.overrideWithValue(FakeAudioRepository()),
         audioPlaybackEngineProvider.overrideWithValue(engine),
       ],
-      child: FTheme(
-        data: AppTheme.light,
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Consumer(
-            builder: (context, ref, _) => Column(
-              children: [
-                FButton(
-                  key: const Key('start'),
-                  onPress: () => ref
-                      .read(audioPlayerControllerProvider.notifier)
-                      .startSurah(1),
-                  child: const Text('Start'),
-                ),
-                const MiniPlayer(),
-              ],
+      child: localized(
+        FTheme(
+          data: AppTheme.light,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Consumer(
+              builder: (context, ref, _) => Column(
+                children: [
+                  FButton(
+                    key: const Key('start'),
+                    onPress: () => ref
+                        .read(audioPlayerControllerProvider.notifier)
+                        .startSurah(1),
+                    child: const Text('Start'),
+                  ),
+                  const MiniPlayer(),
+                ],
+              ),
             ),
           ),
         ),

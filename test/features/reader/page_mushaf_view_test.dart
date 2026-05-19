@@ -14,6 +14,8 @@ import 'package:quran_player/features/reader/widgets/page_mushaf_view.dart';
 import 'package:tarteel_qul/fixtures.dart';
 import 'package:tarteel_qul/tarteel_qul.dart' as qul;
 
+import '../../_support/localized.dart';
+
 void main() {
   // `tarteel_qul`'s deterministic demo layout — opened in setUpAll, outside the
   // testWidgets zone, because sqflite's isolate-backed open deadlocks inside
@@ -42,14 +44,16 @@ void main() {
           // header fallback without loading real font assets.
           mushafHeaderFontsProvider.overrideWith((ref) => false),
         ],
-        child: FTheme(
-          data: AppTheme.light,
-          child: Directionality(
-            textDirection: TextDirection.ltr,
-            child: SizedBox(
-              width: 600,
-              height: 800,
-              child: PageMushafView(engine: demoEngine, initialPage: 1),
+        child: localized(
+          FTheme(
+            data: AppTheme.light,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: SizedBox(
+                width: 600,
+                height: 800,
+                child: PageMushafView(engine: demoEngine, initialPage: 1),
+              ),
             ),
           ),
         ),
