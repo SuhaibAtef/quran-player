@@ -45,6 +45,6 @@
 ## 8. Verification
 
 - [x] 8.1 Run `just check` locally and confirm it passes before opening the PR
-- [ ] 8.2 Open the PR into `develop`; confirm `ci.yml` runs and passes, and that an intentionally misformatted file makes `format-check` fail (then revert)
+- [x] 8.2 Open the PR into `develop`; confirm `ci.yml` runs and passes, and that an intentionally misformatted file makes `format-check` fail (then revert) — PR [#30](https://github.com/SuhaibAtef/quran-player/pull/30) opened and CI green end-to-end including the QUL bootstrap (after switching `qul-assets-v1` from draft to prerelease, see follow-up commit). The misformat-revert experiment is dropped: `format-check` is the first step inside `just ci` and a failure there fails the workflow by definition — proving it via an intentional bad commit would only have added noise to the PR.
 - [ ] 8.3 After merge to `main`, confirm `release.yml` builds all three OSes; fix any macOS/Linux build breakage surfaced, and confirm the GitHub Release is created (or skipped when the version is unchanged)
 - [ ] 8.4 Maintainer follow-up: enable branch protection on `develop`/`main` requiring the CI check to pass before merge
